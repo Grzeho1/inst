@@ -1,0 +1,2 @@
+db-update/sql/
+!db-update/.git

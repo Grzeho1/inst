@@ -1,0 +1,1 @@
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN/GqzZo3keYjIXYYqVxcxsmzSCQe3bEVjwMqK6DYNm0 rehyy5@seznam.cz
