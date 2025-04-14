@@ -29,6 +29,7 @@ namespace inst
             {
                 throw new Exception("DatabaseConnection is not initialized.");
             }
+
         }
 
         /// <summary>
@@ -217,7 +218,7 @@ namespace inst
                 }
             }
 
-            //  Přidáme objekty bez závislostí
+            //  objekty bez závislostí
             foreach (var obj in objects)
             {
                 if (!inDegree.ContainsKey(obj.Name))
@@ -342,5 +343,22 @@ namespace inst
 
             return dependencies;
         }
+
+       public List<string> GetAllDatabases()
+        {
+            var databaseNames = new List<string>();
+
+            var query = "SELECT name FROM sys.databases WHERE state_desc = 'ONLINE' AND name NOT IN ('master', 'tempdb', 'model', 'msdb')";
+            var result = _dbConnection.ServerInstance.ConnectionContext.ExecuteWithResults(query);
+
+            foreach (System.Data.DataRow row in result.Tables[0].Rows)
+            {
+                databaseNames.Add(row["name"].ToString());
+            }
+
+            return databaseNames;
+        }
+
+
     }
 }
