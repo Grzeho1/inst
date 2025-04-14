@@ -58,7 +58,7 @@ namespace inst
                 }
 
                 ServerInstance = new Server(connection);
-                ServerInstance.ConnectionContext.Connect(); //  Ruční připojení k serveru pro ověření
+                ServerInstance.ConnectionContext.Connect();
 
                 //  Kontrola existence databáze
                 if (ServerInstance.Databases.Contains(_databaseName))
@@ -90,5 +90,15 @@ namespace inst
                 Console.WriteLine("Disconnected from server.");
             }
         }
+
+        public void SelectDatabase(string dbName)
+        {
+            if (ServerInstance.Databases.Contains(dbName))
+            {
+                SelectedDatabase = ServerInstance.Databases[dbName];
+            }
+        }
+
+
     }
 }

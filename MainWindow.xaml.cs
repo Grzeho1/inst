@@ -20,10 +20,10 @@ namespace inst
 
     public partial class MainWindow : Window
     {
-        private readonly DatabaseConnection _dbConnection;
+        private DatabaseConnection _dbConnection;
         public DatabaseConnection _dbConnection1;
         private DatabaseConnection _dbConnection2;
-        private readonly DatabaseManager _dbManager; // ERPORT
+        private DatabaseManager _dbManager; // ERPORT
         private DatabaseManager _dbManager1; // Cílová Databáze načítá se z ConnectToTarget_Click
 
         private readonly string _gitPushFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update","auto.ps1");
@@ -52,6 +52,8 @@ namespace inst
             if (_dbConnection.Connect())
             {
                 _dbManager = new DatabaseManager(_dbConnection);
+                DatabaseSelector.ItemsSource = _dbManager.GetAllDatabases();
+
             }
 
             UpdateDatabaseStatus(_dbConnection,DbStatus);
@@ -87,7 +89,7 @@ namespace inst
                 if (dbConnection != null && dbConnection.SelectedDatabase != null)
                 {
                     statusTextBlock.Text = $"Connected to {dbConnection.SelectedDatabase.Name}";
-                    statusTextBlock.Foreground = Brushes.Green;
+                    statusTextBlock.Foreground = Brushes.LightGreen;
                 }
                 else
                 {
@@ -525,7 +527,6 @@ namespace inst
         private void UpdateGit_Click(object sender, RoutedEventArgs e)
         {
             RunPowerShell(_gitPushFolder);
-            MessageBox.Show("Updated", "Info");
 
         }
 
@@ -581,7 +582,19 @@ namespace inst
 
         }
 
+        private void DatabaseSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (DatabaseSelector.SelectedItem is string selectedDb)
+            {
+                _dbConnection.SelectDatabase(selectedDb);
+                UpdateDatabaseStatus(_dbConnection, DbStatus);
+            }
         }
+
+
+
+
+    }
 
 
 }

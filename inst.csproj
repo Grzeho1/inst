@@ -6,7 +6,17 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+	  <BaseOutputPathForPublish>$(MSBuildProjectDirectory)\bin\Publish</BaseOutputPathForPublish>
   </PropertyGroup>
+
+	<Target Name="MoveDllsToLibFolder" AfterTargets="Publish">
+		<!-- Vytvoř podsložku 'lib' ve výstupní složce -->
+		<MakeDir Directories="$(PublishDir)\lib" Condition="!Exists('$(PublishDir)\lib')" />
+		<!-- Přesuň všechny DLL (kromě EXE) do podsložky 'lib' -->
+		<Move SourceFiles="$(PublishDir)\*.dll" DestinationFolder="$(PublishDir)\lib" Condition="Exists('$(PublishDir)\*.dll')" />
+		<!-- Přesuň případné další soubory (např. .resources.dll) -->
+		<Move SourceFiles="$(PublishDir)\**\*.dll" DestinationFolder="$(PublishDir)\lib" Condition="Exists('$(PublishDir)\**\*.dll')" />
+	</Target>
 
   <ItemGroup>
     <None Remove="db-update\auto.ps1" />
