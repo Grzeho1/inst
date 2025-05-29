@@ -28,6 +28,7 @@
     <None Remove="resources\resources\exit.png" />
     <None Remove="resources\resources\loading.png" />
     <None Remove="resources\resources\ok.png" />
+    <None Remove="script\Script.txt" />
   </ItemGroup>
 
   <ItemGroup>
@@ -49,6 +50,9 @@
     </Content>
     <Content Include="resources\resources\loading.png" />
     <Content Include="resources\resources\ok.png" />
+    <Content Include="script\Script.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

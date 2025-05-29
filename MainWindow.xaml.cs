@@ -108,7 +108,8 @@ namespace inst
 
             if (_SavedObjectNames == null)
             {
-                _SavedObjectNames = FileHelper.LoadObjectNames();
+               // _SavedObjectNames = FileHelper.LoadObjectNames();
+                _SavedObjectNames = _dbManager.GetObjectsFromTable(); // Načtu objekty z tabulky v databázi
             }
 
             if (_SavedObjectNames.Count == 0)
@@ -149,7 +150,8 @@ namespace inst
             //var objectNames = FileHelper.LoadObjectNames(); // Načteme seznam objektů ze souboru
             if (_SavedObjectNames == null)
             {
-                _SavedObjectNames = FileHelper.LoadObjectNames();
+                // _SavedObjectNames = FileHelper.LoadObjectNames();
+                _SavedObjectNames = _dbManager.GetObjectsFromTable(); // Načtu objekty z tabulky v databázi
             }
 
             if (_SavedObjectNames.Count == 0)

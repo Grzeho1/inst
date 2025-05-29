@@ -23,7 +23,7 @@ namespace inst
             if (!File.Exists(filePath))
                 return new List<string>();
 
-            return new List<string>(File.ReadAllLines(filePath));
+            return new List<string>(File.ReadAllLines(filePath,Encoding.UTF8));
         }
 
         public static int GetObjectNamesCount()

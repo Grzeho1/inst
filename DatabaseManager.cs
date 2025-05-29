@@ -83,14 +83,14 @@ namespace inst
                 if (!string.IsNullOrEmpty(sqlText))
                 {
                     string fileName = $"{order}_{objName}.sql";
-                  //  string fileName = $"{objName}.sql";
+                    //  string fileName = $"{objName}.sql";
 
                     // Kontrola, zda už tento název není použitý
                     while (usedFileNames.Contains(fileName))
                     {
                         order++;
                         fileName = $"{order}_{objName}.sql";
-                       // fileName = $"{objName}.sql";
+                        // fileName = $"{objName}.sql";
                     }
 
                     string filePath = System.IO.Path.Combine(exportFolderPath, fileName);
@@ -344,7 +344,11 @@ namespace inst
             return dependencies;
         }
 
-       public List<string> GetAllDatabases()
+        /// <summary>
+        /// Získá názvy všech databází na serveru, kromě systémových databází.
+        /// </summary>
+        /// <returns></returns>
+        public List<string> GetAllDatabases()
         {
             var databaseNames = new List<string>();
 
@@ -357,6 +361,55 @@ namespace inst
             }
 
             return databaseNames;
+        }
+
+        /// <summary>
+        /// Získá názvy všech objektů z tabulky `coal_instalObjects` v databázi.
+        /// </summary>
+        /// <returns></returns>
+        public List<string> GetObjectsFromTable()
+        {
+            var objectNames = new List<string>();
+
+            string query = "select nazev from coal_instalObjects";
+
+            var result = _database.ExecuteWithResults(query);
+
+            if (result.Tables.Count > 0 && result.Tables[0].Rows.Count > 0)
+            {
+                foreach (System.Data.DataRow row in result.Tables[0].Rows)
+                {
+                    var name = row["nazev"].ToString();
+                    if (!string.IsNullOrWhiteSpace(name))
+                        objectNames.Add(name.Trim());
+                }
+            }
+
+            return objectNames;
+
+        }
+
+       
+        public List<string> GetObjectsFromTable(string table, string column)
+        {
+            var objectNames = new List<string>();
+
+            string query = $"select {column} from {table}";
+
+            var result = _database.ExecuteWithResults(query);
+
+            if (result.Tables.Count > 0 && result.Tables[0].Rows.Count > 0)
+            {
+                foreach (System.Data.DataRow row in result.Tables[0].Rows)
+                {
+                    var name = row["nazev"].ToString();
+                    if (!string.IsNullOrWhiteSpace(name))
+                        objectNames.Add(name.Trim());
+                }
+            }
+
+            return objectNames;
+
         }
 
 
