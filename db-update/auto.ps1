@@ -4,6 +4,8 @@ $sshFolder = "$env:USERPROFILE\.ssh"
 $privateKey = Join-Path $sshFolder "id_ed25519"
 $publicKey = "$privateKey.pub"
 $remoteUrl = "git@github.com:Grzeho1/sql.git"
+git remote set-url origin $remoteUrl
+Write-Host "[INFO] Remote origin přepsán na: $remoteUrl"
 $changes = $null
 $timestamp = $null
 
@@ -70,11 +72,19 @@ $changes = git status --porcelain
 if ($changes) {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     git commit -m "Auto commit SQL změn - $timestamp"
-    git push origin main
-    Write-Host "[OK] Změny byly odeslány na GitHub." -ForegroundColor Green
+    $pushResult = git push origin main --force 2>&1
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "[OK] Změny byly odeslány na GitHub (force push)." -ForegroundColor Green
+} else {
+    Write-Host "[CHYBA] Push selhal:" -ForegroundColor Red
+    Write-Host $pushResult
+}
+
 } else {
     Write-Host "[INFO] Žádné změny k odeslání." -ForegroundColor Gray
 }
 
 Write-Host ""
+
 Read-Host "Stiskni Enter pro zavření okna"
