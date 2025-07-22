@@ -153,13 +153,13 @@ namespace inst
         /// <returns>Objekt databáze, pokud je nalezen; jinak null.</returns>
         public DatabaseObject GetDatabaseObject(string objectName)
         {
-            //  Hledáme mezi uloženými procedurami
+            //  Hledám mezi procedurami
             if (_database.StoredProcedures.Contains(objectName) && !_database.StoredProcedures[objectName].IsSystemObject)
             {
                 return new DatabaseObject(objectName, "Stored Procedure", "FOUND");
             }
 
-            //  Hledáme mezi triggery pomocí přímého dotazu
+            //  Hledám mezi triggery 
             string triggerQuery = $@"
                     SELECT name 
                     FROM sys.triggers 
@@ -172,13 +172,13 @@ namespace inst
                 return new DatabaseObject(objectName, "Trigger", "FOUND");
             }
 
-            // 🔹 Hledáme mezi pohledy (Views)
+            //  Hledám mezi Views
             if (_database.Views.Contains(objectName))
             {
                 return new DatabaseObject(objectName, "View", "FOUND");
             }
 
-            return null; // Objekt nebyl nalezen
+            return null; //nebyl nalezen
         }
 
         /// <summary>
@@ -402,7 +402,7 @@ namespace inst
             {
                 foreach (System.Data.DataRow row in result.Tables[0].Rows)
                 {
-                    var name = row["nazev"].ToString();
+                    var name = row[column].ToString();
                     if (!string.IsNullOrWhiteSpace(name))
                         objectNames.Add(name.Trim());
                 }

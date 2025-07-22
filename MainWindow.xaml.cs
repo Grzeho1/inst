@@ -35,7 +35,7 @@ namespace inst
 
 
         string erportServerName = @"172.16.131.81";
-        string erportDatabaseName = "Helios003";
+        string erportDatabaseName = "HeliosKonektor000";  // pokud je Shoptet
         string targetServerName = "";
         string targetDatabaseName = "";
 
@@ -231,10 +231,10 @@ namespace inst
         {
             try
             {
-                // Zkontroluj, zda složka existuje
+                // zda složka existuje
                 if (!Directory.Exists(_exportFolderPath))
                 {
-                    // Vytvoř složku, pokud neexistuje
+                    // Vytvoř pokud neexistuje
                     Directory.CreateDirectory(_exportFolderPath);
                   //  MessageBox.Show($"Složka {_exportFolderPath} byla vytvořena.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -244,7 +244,7 @@ namespace inst
             }
             catch (Exception ex)
             {
-                // Zachyť výjimku a zobraz chybu
+                // zobraz chybu
                 MessageBox.Show($"Nepodařilo se otevřít složku: {ex.Message}", "Chyba", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -461,13 +461,13 @@ namespace inst
             Paragraph paragraph = new Paragraph();
             paragraph.Margin = new System.Windows.Thickness(0); 
 
-            // Definice regex
+            
             string keywords = @"\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|INNER|LEFT|RIGHT|ON|AND|OR|NOT|NULL|AS|IN|BEGIN|END|TRANSACTION|ROLLBACK|COMMIT|TRY|CATCH|DECLARE|VALUES|SET|CASE|WHEN|THEN|ELSE)\b";
             string functions = @"\b(COUNT|SUM|AVG|MIN|MAX|LEN|GETDATE|NOW|DATEDIFF|CAST|CONVERT|ISNULL|COALESCE|ROUND|SUBSTRING|CHARINDEX|REPLACE|LTRIM|RTRIM|UPPER|LOWER)\b";
-            string strings = @"'([^']*)'"; // Zvýraznění textových hodnot
-            string comments = @"(--.*?$)|(/\*[\s\S]*?\*/)"; // SQL komentáře
+            string strings = @"'([^']*)'"; 
+            string comments = @"(--.*?$)|(/\*[\s\S]*?\*/)"; 
 
-            // Procházíme SQL text řádek po řádku
+           
             foreach (string line in sqlText.Split('\n'))
             {
                 int index = 0;
