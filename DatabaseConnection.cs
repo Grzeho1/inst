@@ -1,14 +1,15 @@
 ﻿using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Smo;
 using System;
+using System.Data.Common;
 using System.Windows;
 
 namespace inst
 {
     public class DatabaseConnection
     {
-        public Server ServerInstance { get; private set; }
-        public Database SelectedDatabase { get; private set; }
+        public Server? ServerInstance { get; private set; }
+        public Database? SelectedDatabase { get; private set; }
 
         //private readonly string serverName = @"172.16.131.81"; // @"DESKTOP-FUQ15OI\SQLEXPRESS";
         //private readonly string databaseName = "Helios003"; // "testovaci";
@@ -93,11 +94,28 @@ namespace inst
 
         public void SelectDatabase(string dbName)
         {
-            if (ServerInstance.Databases.Contains(dbName))
+            if (ServerInstance != null && ServerInstance.Databases.Contains(dbName))
             {
                 SelectedDatabase = ServerInstance.Databases[dbName];
             }
         }
+
+        public bool CheckConnectionStatus()
+        {
+            try
+            {
+                
+                return ServerInstance != null && ServerInstance.ConnectionContext.IsOpen;
+            }
+            catch (Exception ex)
+            {
+                
+                Console.WriteLine($"Error checking connection status: {ex.Message}");
+                return false;
+            }
+        }
+
+
 
 
     }

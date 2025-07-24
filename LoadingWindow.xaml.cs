@@ -1,44 +1,47 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Windows;
-
+using inst.Enums;
 namespace inst
 {
     public partial class LoadingWindow : Window
     {
+        private DatabaseConnection _dbConnection = null!; // Initialize with null-forgiving operator to satisfy the compiler.  
+
         public LoadingWindow()
         {
-            //InitializeComponent();
-            //this.Loaded += async (s, e) => await StartLoading();
+            InitializeComponent();
+            InitializeDatabaseConnection();
         }
 
-        //private async Task StartLoading()
-        //{
-        //    UpdateStatus("Connecting to database...");
-        //    await Task.Delay(3000);
+        public async void InitializeDatabaseConnection()
+        {
+            if (GlobalConfig.SelectedKonektor == KonektorEnums.Konektor.Univerzal)
+            {
+                _dbConnection = new DatabaseConnection(GlobalConfig.ServerIP, GlobalConfig.UniverzalDatabase, true);
+            }
+            else
+            {
+                _dbConnection = new DatabaseConnection(GlobalConfig.ServerIP, GlobalConfig.ShoptetDatabase, true);
+            }
 
-        //    DatabaseConnection dbConnection = new DatabaseConnection();
-        //    bool isConnected = dbConnection.Connect();
+            UpdateStatus($"Connecting to server ");
 
-        //    if (isConnected)
-        //    {
-        //        UpdateStatus("Loading database objects...");
-        //        await Task.Delay(3000);
-        //    }
-        //    else
-        //    {
-        //        MessageBox.Show("❌ Database connection failed!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        //    }
+            bool isConnected = await Task.Run(() => _dbConnection.Connect());
+            if (isConnected)
+            {
+                UpdateStatus("Connected to server, loading database");
 
-        //    this.Hide();
-        //    Application.Current.Dispatcher.Invoke(() =>
-        //    {
-        //        MainWindow mainWindow = new MainWindow(dbConnection);
-        //        mainWindow.Show();
-        //    });
-
-        //    this.Close();
-        //}
+                MainWindow mainWindow = new MainWindow(_dbConnection);
+                mainWindow.Show();
+                this.Close();
+            }
+            else
+            {
+                MessageBox.Show("Chyba při připojení k databázi", "Chyba", MessageBoxButton.OK, MessageBoxImage.Error);
+                this.Close();
+            }
+        }
 
         public void UpdateStatus(string message) => StatusText.Text = message;
     }
