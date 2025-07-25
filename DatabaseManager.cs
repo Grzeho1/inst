@@ -13,7 +13,8 @@ namespace inst
     public class DatabaseManager
     {
         private readonly DatabaseConnection _dbConnection;
-        private Database _database => _dbConnection.SelectedDatabase;
+        //private Database? _database => _dbConnection.SelectedDatabase;
+        private readonly Database _database;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DatabaseManager"/> class.
@@ -29,6 +30,8 @@ namespace inst
             {
                 throw new Exception("DatabaseConnection is not initialized.");
             }
+            _database = _dbConnection.SelectedDatabase;
+
 
         }
 
@@ -112,21 +115,8 @@ namespace inst
         /// </summary>
         /// <param name="objectName">Název objektu databáze.</param>
         /// <returns>SQL text objektu.</returns>
-        private string GetObjectText(string objectName)
+        private string? GetObjectText(string objectName)
         {
-
-            //string query = $@"
-            //    SELECT definition 
-            //    FROM sys.sql_modules 
-            //    WHERE object_id = OBJECT_ID('{objectName}');
-            //";
-
-            //var dataset = _database.ExecuteWithResults(query);
-            //if (dataset.Tables.Count == 0 || dataset.Tables[0].Rows.Count == 0)
-            //    return null;
-
-            //return dataset.Tables[0].Rows[0]["definition"].ToString();
-
             string query = $@"
         SELECT 
             definition,
@@ -136,15 +126,26 @@ namespace inst
     ";
 
             var dataset = _database.ExecuteWithResults(query);
-            if (dataset.Tables.Count == 0 || dataset.Tables[0].Rows.Count == 0)
+
+            //  dataset a tabulka i řádky musí existovat
+            if (dataset == null || dataset.Tables.Count == 0 || dataset.Tables[0].Rows.Count == 0)
                 return null;
 
-            string definition = dataset.Tables[0].Rows[0]["definition"].ToString();
-            string quotedIdentifierSetting = dataset.Tables[0].Rows[0]["quoted_identifier_setting"].ToString();
+            var row = dataset.Tables[0].Rows[0];
+
+            
+            string? definition = row["definition"]?.ToString();
+            string? quotedIdentifierSetting = row["quoted_identifier_setting"]?.ToString();
+
+          
+            if (string.IsNullOrWhiteSpace(definition))
+                return null;
+
+            quotedIdentifierSetting ??= "SET QUOTED_IDENTIFIER ON;";
 
             return $"{quotedIdentifierSetting}\nGO\n{definition}";
-
         }
+
 
         /// <summary>
         /// Získá specifikovaný objekt databáze podle jeho názvu.
@@ -324,23 +325,24 @@ namespace inst
                 FROM sys.sql_expression_dependencies 
                 WHERE referencing_id = OBJECT_ID('{objectName}')
             ";
+           
+                var dataset = _database.ExecuteWithResults(query);
+                if (dataset.Tables.Count == 0 || dataset.Tables[0].Rows.Count == 0)
+                    return dependencies;
 
-            var dataset = _database.ExecuteWithResults(query);
-            if (dataset.Tables.Count == 0 || dataset.Tables[0].Rows.Count == 0)
-                return dependencies;
+                var table = dataset.Tables[0];
 
-            var table = dataset.Tables[0];
-
-            foreach (System.Data.DataRow row in table.Rows)
-            {
-                string dependency = row["referenced_entity_name"].ToString();
-                if (objectNames.Contains(dependency)) //  Jen pokud je v seznamu exportovaných objektů
+                foreach (System.Data.DataRow row in table.Rows)
                 {
-                    dependencies.Add(dependency);
-                    Console.WriteLine($"{objectName} závisí na {dependency}");
+                    string dependency = row["referenced_entity_name"].ToString();
+                    if (objectNames.Contains(dependency)) //  Jen pokud je v seznamu exportovaných objektů
+                    {
+                        dependencies.Add(dependency);
+                        Console.WriteLine($"{objectName} závisí na {dependency}");
+                    }
                 }
-            }
-
+            
+            
             return dependencies;
         }
 

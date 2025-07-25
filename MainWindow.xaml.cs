@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-//using System.IdentityModel.Protocols.WSTrust;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -21,42 +20,39 @@ namespace inst
     public partial class MainWindow : Window
     {
         private DatabaseConnection _dbConnection;
-        public DatabaseConnection _dbConnection1;
-        private DatabaseConnection _dbConnection2;
+        private DatabaseConnection? _dbConnection2;
         private DatabaseManager _dbManager; // ERPORT
-        private DatabaseManager _dbManager1; // Cílová Databáze načítá se z ConnectToTarget_Click
 
-        private readonly string _gitPushFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update","auto.ps1");
-        private readonly string _exportFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update","sql");
-        private readonly string _exportFolderPath_Bal = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update 2","sql_Balikobot");
+       //  private DatabaseManager _dbManager1; // Cílová Databáze načítá se z ConnectToTarget_Click
+       //  private readonly string _gitPushFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update","auto.ps1");
+       //  private readonly string _exportFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update","sql");
+       // private readonly string _exportFolderPath_Bal = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update 2","sql_Balikobot");
+
         private readonly string _solutionFolder = AppDomain.CurrentDomain.BaseDirectory;
+        private readonly string _gitPushFolder = GlobalConfig.GitPushFolderShoptet;
+        private readonly string _exportFolderPath = GlobalConfig.exportFolderPathShoptet;
         private readonly string sourceFolder;
         private readonly string outputFile;
 
-
-        string erportServerName = @"172.16.131.81";
-        string erportDatabaseName = "HeliosKonektor000";  // pokud je Shoptet
-        string targetServerName = "";
-        string targetDatabaseName = "";
-
-        private List<string> _SavedObjectNames = null;  // Načtené objekty ze souboru.
+        private List<string>? _SavedObjectNames = null;  // Načtené objekty ze souboru.
 
 
-        public MainWindow()
+        public MainWindow(DatabaseConnection dbConnection)
         {
             InitializeComponent();
-
+            
             outputFile = Path.Combine(_solutionFolder, "Script", "Script.txt");
 
-            _dbConnection = new DatabaseConnection(erportServerName, erportDatabaseName, true);
-            if (_dbConnection.Connect())
+            _dbConnection = dbConnection;
+            bool isConnected = _dbConnection.CheckConnectionStatus();
+
+            if (isConnected)
             {
                 _dbManager = new DatabaseManager(_dbConnection);
                 DatabaseSelector.ItemsSource = _dbManager.GetAllDatabases();
-
             }
 
-            UpdateDatabaseStatus(_dbConnection,DbStatus);
+            UpdateDatabaseStatus(_dbConnection, DbStatus);
         }
 
         /// <summary>
@@ -196,7 +192,7 @@ namespace inst
 
         private void ConnectToTarget_Click(object sender, RoutedEventArgs e)
         {
-            // Správně načteme hodnoty ze vstupních polí při kliknutí
+            
             //targetServerName = TargetDbServer.Text.Trim();
             //targetDatabaseName = TargetDbName.Text.Trim();
 
@@ -251,7 +247,10 @@ namespace inst
 
         private void CloseWindow_Click(object sender, RoutedEventArgs e)
         {
+            _dbConnection.Disconect();
+
             this.Close();
+            
         }
 
         private void Grid_MouseDown(object sender, MouseButtonEventArgs e)
