@@ -16,14 +16,15 @@ namespace inst
 
         public async void InitializeDatabaseConnection()
         {
-            if (GlobalConfig.SelectedKonektor == KonektorEnums.Konektor.Univerzal)
-            {
-                _dbConnection = new DatabaseConnection(GlobalConfig.ServerIP, GlobalConfig.UniverzalDatabase, true);
-            }
-            else
-            {
-                _dbConnection = new DatabaseConnection(GlobalConfig.ServerIP, GlobalConfig.ShoptetDatabase, true);
-            }
+            //if (GlobalConfig.SelectedKonektor == KonektorEnums.Konektor.Univerzal)
+            //{
+            //    _dbConnection = new DatabaseConnection(GlobalConfig.ServerIP, GlobalConfig.Active.Database, true);
+            //}
+            //else
+            //{
+            //    _dbConnection = new DatabaseConnection(GlobalConfig.ServerIP, GlobalConfig.Active.Database, true);
+            //}
+            _dbConnection = new DatabaseConnection(GlobalConfig.ServerIP, GlobalConfig.Active.Database, true);
 
             UpdateStatus($"Connecting to server ");
 

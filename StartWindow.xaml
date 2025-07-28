@@ -87,7 +87,7 @@
             </Grid>
 
             <!-- Statusový TextBox nebo Label pro zobrazení připojení -->
-            <TextBox Name="Status_TextBox" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10" IsReadOnly="True" Background="#ecf0f1" Foreground="#2c3e50" BorderBrush="#bdc3c7" BorderThickness="1" Text="" />
+            <TextBox Name="Status_TextBox" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="30" IsReadOnly="True" Background="#ecf0f1" Foreground="#2c3e50" BorderBrush="#bdc3c7" BorderThickness="1" Text="" />
             <!-- Nebo Label místo TextBox -->
             <!-- <Label Name="StatusLabel" Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10" Content="Připojuji se k databázi..." FontSize="16" Foreground="#2c3e50" /> -->
         </Grid>

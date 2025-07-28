@@ -23,7 +23,6 @@
     <None Remove="db-update\git_push.bat" />
     <None Remove="db-update\pubkey.pub.txt" />
     <None Remove="db-update\pubkey.txt" />
-    <None Remove="objects_to_load.txt" />
     <None Remove="resources\ok.png" />
     <None Remove="resources\resources\exit.png" />
     <None Remove="resources\resources\loading.png" />
@@ -42,9 +41,6 @@
     <Content Include="db-update\pubkey.pub.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="objects_to_load.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="resources\resources\exit.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -62,6 +58,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="db-update\Univerzal_SQL\" />
     <Folder Include="db-update\sql\" />
     <Folder Include="NováSložka\" />
     <Folder Include="objects\" />

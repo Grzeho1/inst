@@ -4,6 +4,10 @@ $sshFolder = "$env:USERPROFILE\.ssh"
 $privateKey = Join-Path $sshFolder "id_ed25519"
 $publicKey = "$privateKey.pub"
 $remoteUrl = "git@github.com:Grzeho1/sql.git"
+if (-not (Test-Path $sshFolder)) {
+    New-Item -ItemType Directory -Path $sshFolder -Force
+}
+
 git remote set-url origin $remoteUrl
 Write-Host "[INFO] Remote origin přepsán na: $remoteUrl"
 $changes = $null
@@ -59,14 +63,16 @@ if ($remoteUrl -like "https://github.com/*") {
 }
 
 
-if (-not (Test-Path "db-update/sql")) {
-    Write-Host "[ERROR] Složka db-update/sql neexistuje." -ForegroundColor Red
+if (-not (Test-Path "db-update")) {
+    Write-Host "[ERROR] Složka db-update neexistuje." -ForegroundColor Red
     Read-Host "Stiskni Enter pro pokračování..."
     exit 1
 }
 
 
-git add db-update/sql/ 2>$null
+git add -A db-update/sql/ 2>$null
+git add -A db-update/Univerzal_SQL/
+git add -A db-update/Shoptet_SQL/
 $changes = git status --porcelain
 
 if ($changes) {

@@ -13,6 +13,9 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Diagnostics;
+using inst.Enums;
+using System.IO.Packaging;
+
 
 namespace inst
 {
@@ -29,8 +32,8 @@ namespace inst
        // private readonly string _exportFolderPath_Bal = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update 2","sql_Balikobot");
 
         private readonly string _solutionFolder = AppDomain.CurrentDomain.BaseDirectory;
-        private readonly string _gitPushFolder = GlobalConfig.GitPushFolderShoptet;
-        private readonly string _exportFolderPath = GlobalConfig.exportFolderPathShoptet;
+        private readonly string _gitPushFolder = GlobalConfig.Active.GitScriptPath;
+        private readonly string _exportFolderPath = GlobalConfig.Active.ExportFolderPath;
         private readonly string sourceFolder;
         private readonly string outputFile;
 
@@ -53,7 +56,9 @@ namespace inst
             }
 
             UpdateDatabaseStatus(_dbConnection, DbStatus);
+            Console.WriteLine(_gitPushFolder, _exportFolderPath,GlobalConfig.Active);
         }
+
 
         /// <summary>
         /// Aktualizuje status cílové databáze podle stavu připojení
@@ -164,9 +169,19 @@ namespace inst
             {
                 var sortedObjects = _dbManager.GetOrderedObjects(_SavedObjectNames); // podle závislostí
                 _dbManager.ExportObjectsToFolder(_exportFolderPath, sortedObjects); //  Export 
+                DeleteFromDirectory(sortedObjects);
+
             });
 
+            
+
             Console.WriteLine("Export dokončen.");
+
+        }
+
+        public void DeleteFromDirectory(List<string> dtbObjects)
+        {
+
 
         }
 
@@ -527,7 +542,18 @@ namespace inst
 
         private void UpdateGit_Click(object sender, RoutedEventArgs e)
         {
-            RunPowerShell(_gitPushFolder);
+           RunPowerShell(_gitPushFolder);
+            //try
+            //{
+            //    var git = new GithubHelper();
+            //    git.Run();
+            //    MessageBox.Show("Změny byly odeslány na GitHub.", "Hotovo", MessageBoxButton.OK, MessageBoxImage.Information);
+            //}
+            //catch (Exception ex)
+
+            //{
+            //    MessageBox.Show($"Chyba při odesílání na GitHub:\n{ex.Message}", "Chyba", MessageBoxButton.OK, MessageBoxImage.Error);
+            //}
 
         }
 
