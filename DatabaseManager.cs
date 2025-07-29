@@ -15,7 +15,7 @@ namespace inst
         private readonly DatabaseConnection _dbConnection;
         //private Database? _database => _dbConnection.SelectedDatabase;
         private readonly Database _database;
-
+        private CancellationTokenSource _cancellationTokenSource;
         /// <summary>
         /// Initializes a new instance of the <see cref="DatabaseManager"/> class.
         /// </summary>
@@ -68,14 +68,14 @@ namespace inst
         /// </summary>
         /// <param name="exportFolderPath">Cesta ke složce, kam budou objekty exportovány.</param>
         /// <param name="objectNames">Seznam názvů objektů, které mají být exportovány.</param>
-        public void ExportObjectsToFolder(string exportFolderPath, List<string> objectNames)
+        public void ExportObjectsToFolder(string exportFolderPath, List<string> objectNames, CancellationToken token)
         {
             if (!Directory.Exists(exportFolderPath))
             {
                 Directory.CreateDirectory(exportFolderPath);
             }
 
-            var sortedObjects = GetOrderedObjects(objectNames);
+            var sortedObjects = GetOrderedObjects(objectNames,token);
             HashSet<string> usedFileNames = new HashSet<string>(); // Sledování použitých názvů
 
             int order = 1;
@@ -152,8 +152,16 @@ namespace inst
         /// </summary>
         /// <param name="objectName">Název objektu databáze, který má být získán.</param>
         /// <returns>Objekt databáze, pokud je nalezen; jinak null.</returns>
-        public DatabaseObject GetDatabaseObject(string objectName)
+        public DatabaseObject GetDatabaseObject(string objectName, CancellationToken token)
         {
+            
+
+            if (token.IsCancellationRequested)
+            {
+                Console.WriteLine("přerušeno.");
+                return null;
+            }
+
             //  Hledám mezi procedurami
             if (_database.StoredProcedures.Contains(objectName) && !_database.StoredProcedures[objectName].IsSystemObject)
             {
@@ -187,15 +195,18 @@ namespace inst
         /// </summary>
         /// <param name="objectNames">Seznam názvů objektů, které mají být seřazeny.</param>
         /// <returns>Seznam seřazených názvů objektů.</returns>
-        public List<string> GetOrderedObjects(List<string> objectNames)
+        public List<string> GetOrderedObjects(List<string> objectNames,CancellationToken token)
         {
-            var objects = GetDatabaseObjectsWithDependencies(objectNames); // Pouze vybrané objekty
+            var objects = GetDatabaseObjectsWithDependencies(objectNames,token); // Pouze vybrané objekty
             Dictionary<string, List<string>> adjacencyList = new Dictionary<string, List<string>>();
             Dictionary<string, int> inDegree = new Dictionary<string, int>();
 
+           
             //  Vytvoření grafu závislostí
             foreach (var obj in objects)
             {
+                
+
                 if (!adjacencyList.ContainsKey(obj.Name))
                     adjacencyList[obj.Name] = new List<string>();
 
@@ -261,14 +272,20 @@ namespace inst
         /// </summary>
         /// <param name="objectNames">Seznam názvů objektů, které mají být získány se závislostmi.</param>
         /// <returns>Seznam objektů databáze se závislostmi.</returns>
-        public List<DatabaseObject> GetDatabaseObjectsWithDependencies(List<string> objectNames)
+        public List<DatabaseObject> GetDatabaseObjectsWithDependencies(List<string> objectNames,CancellationToken token)
         {
             List<DatabaseObject> objects = new List<DatabaseObject>();
 
             Console.WriteLine("načítání objektů se závislostmi...");
-
+        
             foreach (var objName in objectNames)
             {
+                if (token.IsCancellationRequested)
+                {
+                    Console.WriteLine("přerušeno.");
+                    return objects;
+                }
+
                 string objectType = GetObjectType(objName);
 
                 if (!string.IsNullOrEmpty(objectType))
@@ -369,7 +386,7 @@ namespace inst
         /// Získá názvy všech objektů z tabulky `coal_instalObjects` v databázi.
         /// </summary>
         /// <returns></returns>
-        public List<string> GetObjectsFromTable()
+        public List<string> GetObjectsFromTable(CancellationToken token)
         {
             var objectNames = new List<string>();
 
@@ -381,6 +398,11 @@ namespace inst
             {
                 foreach (System.Data.DataRow row in result.Tables[0].Rows)
                 {
+                    if (token.IsCancellationRequested)
+                    {
+                        Console.WriteLine("přerušeno.");
+                        return new List<string>();
+                    }
                     var name = row["nazev"].ToString();
                     if (!string.IsNullOrWhiteSpace(name))
                         objectNames.Add(name.Trim());

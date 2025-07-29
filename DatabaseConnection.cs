@@ -92,6 +92,15 @@ namespace inst
             }
         }
 
+        public async Task DisconnectAsync()
+        {
+            if (ServerInstance != null && ServerInstance.ConnectionContext.IsOpen)
+            {
+                await Task.Run(() => ServerInstance.ConnectionContext.Disconnect());
+                Console.WriteLine("Disconnected from server.");
+            }
+        }
+
         public void SelectDatabase(string dbName)
         {
             if (ServerInstance != null && ServerInstance.Databases.Contains(dbName))

@@ -1,8 +1,12 @@
-﻿using System;
+﻿using inst.Enums;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Packaging;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -12,9 +16,6 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Diagnostics;
-using inst.Enums;
-using System.IO.Packaging;
 
 
 namespace inst
@@ -39,6 +40,8 @@ namespace inst
 
         private List<string>? _SavedObjectNames = null;  // Načtené objekty ze souboru.
 
+        private CancellationTokenSource _cancellationTokenSource; // Přerušení běžícího vlákna
+   
 
         public MainWindow(DatabaseConnection dbConnection)
         {
@@ -102,7 +105,7 @@ namespace inst
 
 
 
-        private async Task LoadDatabaseObjectsAsync()
+        private async Task LoadDatabaseObjectsAsync(CancellationToken token = default)
         {
             // var objectNames = FileHelper.LoadObjectNames(); //Načtu Seznam objektů ze souboru
             var count = 0;
@@ -110,7 +113,7 @@ namespace inst
             if (_SavedObjectNames == null)
             {
                // _SavedObjectNames = FileHelper.LoadObjectNames();
-                _SavedObjectNames = _dbManager.GetObjectsFromTable(); // Načtu objekty z tabulky v databázi
+                _SavedObjectNames = _dbManager.GetObjectsFromTable(token); // Načtu objekty z tabulky v databázi
             }
 
             if (_SavedObjectNames.Count == 0)
@@ -119,12 +122,21 @@ namespace inst
                 return;
             }
 
+          
+
             await Task.Run(() =>
             {
                 foreach (var objName in _SavedObjectNames)
                 {
-                    var totalObjectsCount = _SavedObjectNames.Count;
-                    var obj = _dbManager.GetDatabaseObject(objName); //  Načtu objekt z databáze
+
+                    if (token.IsCancellationRequested)
+                    {
+                        Console.WriteLine("přerušeno.");
+                        return; 
+                    }
+
+                        var totalObjectsCount = _SavedObjectNames.Count;
+                    var obj = _dbManager.GetDatabaseObject(objName, token); //  Načtu objekt z databáze
 
 
                     //  Aktualizuj UI
@@ -147,12 +159,19 @@ namespace inst
 
         private async void ExportSql_Click(object sender, RoutedEventArgs e)
         {
+            _cancellationTokenSource = new CancellationTokenSource();
+
             ExportLog.Items.Clear();
+
+            if (!Directory.Exists(_exportFolderPath))
+            {
+                Directory.CreateDirectory(_exportFolderPath);
+            }
+
             //var objectNames = FileHelper.LoadObjectNames(); // Načteme seznam objektů ze souboru
             if (_SavedObjectNames == null)
             {
-                // _SavedObjectNames = FileHelper.LoadObjectNames();
-                _SavedObjectNames = _dbManager.GetObjectsFromTable(); // Načtu objekty z tabulky v databázi
+                _SavedObjectNames = _dbManager.GetObjectsFromTable(_cancellationTokenSource.Token); // Načtu objekty z tabulky v databázi
             }
 
             if (_SavedObjectNames.Count == 0)
@@ -161,15 +180,15 @@ namespace inst
                 return;
             }
 
-            await LoadDatabaseObjectsAsync();
+            await LoadDatabaseObjectsAsync(_cancellationTokenSource.Token);
 
 
             Console.WriteLine("Začínám export...");
             await Task.Run(() =>
             {
-                var sortedObjects = _dbManager.GetOrderedObjects(_SavedObjectNames); // podle závislostí
-                _dbManager.ExportObjectsToFolder(_exportFolderPath, sortedObjects); //  Export 
-                DeleteFromDirectory(sortedObjects);
+                var sortedObjects = _dbManager.GetOrderedObjects(_SavedObjectNames,_cancellationTokenSource.Token); // podle závislostí
+                _dbManager.ExportObjectsToFolder(_exportFolderPath, sortedObjects,_cancellationTokenSource.Token); //  Export 
+               // DeleteFromDirectory(sortedObjects);
 
             });
 
@@ -233,7 +252,10 @@ namespace inst
 
         protected override void OnClosed(EventArgs e)
         {
-            _dbConnection?.Disconect();
+            _cancellationTokenSource?.Cancel(); // Zruší běžící úlohu, pokud je.
+
+            
+            _dbConnection?.DisconnectAsync();
             base.OnClosed(e);
            
         }
