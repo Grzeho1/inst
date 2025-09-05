@@ -75,8 +75,8 @@ namespace inst
                 Directory.CreateDirectory(exportFolderPath);
             }
 
-            var sortedObjects = GetOrderedObjects(objectNames,token);
-            HashSet<string> usedFileNames = new HashSet<string>(); // Sledování použitých názvů
+            var sortedObjects = GetOrderedObjects(objectNames, token);
+            HashSet<string> usedFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             int order = 1;
             foreach (var objName in sortedObjects)
@@ -85,23 +85,18 @@ namespace inst
 
                 if (!string.IsNullOrEmpty(sqlText))
                 {
-                    string fileName = $"{order}_{objName}.sql";
-                    //  string fileName = $"{objName}.sql";
-
-                    // Kontrola, zda už tento název není použitý
-                    while (usedFileNames.Contains(fileName))
+                    string fileName;
+                    do
                     {
-                        order++;
                         fileName = $"{order}_{objName}.sql";
-                        // fileName = $"{objName}.sql";
-                    }
+                        order++;
+                    } while (usedFileNames.Contains(fileName));
 
                     string filePath = System.IO.Path.Combine(exportFolderPath, fileName);
                     File.WriteAllText(filePath, sqlText);
                     Console.WriteLine($" Exported: {filePath}");
 
-                    usedFileNames.Add(fileName); // Přidáme název do sledovaných
-                    order++;
+                    usedFileNames.Add(fileName);
                 }
                 else
                 {
@@ -109,6 +104,7 @@ namespace inst
                 }
             }
         }
+
 
         /// <summary>
         /// Získá SQL text specifikovaného objektu databáze.
@@ -133,7 +129,6 @@ namespace inst
 
             var row = dataset.Tables[0].Rows[0];
 
-            
             string? definition = row["definition"]?.ToString();
             string? quotedIdentifierSetting = row["quoted_identifier_setting"]?.ToString();
 
@@ -267,11 +262,7 @@ namespace inst
             return sortedObjects;
         }
 
-        /// <summary>
-        /// Získá objekty databáze spolu s jejich závislostmi.
-        /// </summary>
-        /// <param name="objectNames">Seznam názvů objektů, které mají být získány se závislostmi.</param>
-        /// <returns>Seznam objektů databáze se závislostmi.</returns>
+        
         public List<DatabaseObject> GetDatabaseObjectsWithDependencies(List<string> objectNames,CancellationToken token)
         {
             List<DatabaseObject> objects = new List<DatabaseObject>();
@@ -301,11 +292,7 @@ namespace inst
             return objects;
         }
 
-        /// <summary>
-        /// Získá typ specifikovaného objektu databáze.
-        /// </summary>
-        /// <param name="objectName">Název objektu databáze.</param>
-        /// <returns>Typ objektu.</returns>
+       
         private string GetObjectType(string objectName)
         {
             string query = $@"
@@ -327,12 +314,7 @@ namespace inst
             return null;
         }
 
-        /// <summary>
-        /// Získá závislosti specifikovaného objektu databáze.
-        /// </summary>
-        /// <param name="objectName">Název objektu databáze.</param>
-        /// <param name="objectNames">Seznam názvů objektů, proti kterým se kontrolují závislosti.</param>
-        /// <returns>Seznam závislostí.</returns>
+        
         private List<string> GetObjectDependencies(string objectName, List<string> objectNames)
         {
             List<string> dependencies = new List<string>();
@@ -363,10 +345,7 @@ namespace inst
             return dependencies;
         }
 
-        /// <summary>
-        /// Získá názvy všech databází na serveru, kromě systémových databází.
-        /// </summary>
-        /// <returns></returns>
+     
         public List<string> GetAllDatabases()
         {
             var databaseNames = new List<string>();
@@ -382,10 +361,7 @@ namespace inst
             return databaseNames;
         }
 
-        /// <summary>
-        /// Získá názvy všech objektů z tabulky `coal_instalObjects` v databázi.
-        /// </summary>
-        /// <returns></returns>
+       
         public List<string> GetObjectsFromTable(CancellationToken token)
         {
             var objectNames = new List<string>();

@@ -18,6 +18,21 @@
 		<Move SourceFiles="$(PublishDir)\**\*.dll" DestinationFolder="$(PublishDir)\lib" Condition="Exists('$(PublishDir)\**\*.dll')" />
 	</Target>
 
+	<ItemGroup>
+	  <Compile Remove="db-update\sql\**" />
+	  <Compile Remove="NováSložka\**" />
+	  <Compile Remove="objects\**" />
+	  <EmbeddedResource Remove="db-update\sql\**" />
+	  <EmbeddedResource Remove="NováSložka\**" />
+	  <EmbeddedResource Remove="objects\**" />
+	  <None Remove="db-update\sql\**" />
+	  <None Remove="NováSložka\**" />
+	  <None Remove="objects\**" />
+	  <Page Remove="db-update\sql\**" />
+	  <Page Remove="NováSložka\**" />
+	  <Page Remove="objects\**" />
+	</ItemGroup>
+
   <ItemGroup>
     <None Remove="db-update\auto.ps1" />
     <None Remove="db-update\git_push.bat" />
@@ -59,9 +74,6 @@
 
   <ItemGroup>
     <Folder Include="db-update\Univerzal_SQL\" />
-    <Folder Include="db-update\sql\" />
-    <Folder Include="NováSložka\" />
-    <Folder Include="objects\" />
   </ItemGroup>
 
   <ItemGroup>

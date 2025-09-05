@@ -11,12 +11,6 @@ namespace inst
         public Server? ServerInstance { get; private set; }
         public Database? SelectedDatabase { get; private set; }
 
-        //private readonly string serverName = @"172.16.131.81"; // @"DESKTOP-FUQ15OI\SQLEXPRESS";
-        //private readonly string databaseName = "Helios003"; // "testovaci";
-        //private readonly bool useWindowsAuth = true; //  False pokud je SQL Authentication
-        //private readonly string userId = "tomas"; //  pokud je `useWindowsAuth = false`
-        //private readonly string password = "123456"; // pokud je `useWindowsAuth = false`
-
         private readonly string _serverName;
         private readonly string _databaseName;
         private readonly bool _useWindowsAuth;
