@@ -7,9 +7,7 @@ using System.Threading.Tasks;
 
 namespace inst
 {
-    /// <summary>
-    /// Represents a database object with a name, type, status, and dependencies.
-    /// </summary>
+    
     public class DatabaseObject
     {
       

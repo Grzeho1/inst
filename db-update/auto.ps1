@@ -76,10 +76,10 @@ $changes = git status --porcelain
 if ($changes) {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     git commit -m "Auto commit SQL změn - $timestamp"
-    $pushResult = git push origin main --force 2>&1
+    $pushResult = git push origin main 2>&1
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "[OK] Změny byly odeslány na GitHub (force push)." -ForegroundColor Green
+    Write-Host "[OK] Změny byly odeslány na GitHub ." -ForegroundColor Green
 } else {
     Write-Host "[CHYBA] Push selhal:" -ForegroundColor Red
     Write-Host $pushResult
