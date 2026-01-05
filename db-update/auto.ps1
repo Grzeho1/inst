@@ -7,7 +7,7 @@ $repoPath =$thisScriptDir
 $sshFolder = "$env:USERPROFILE\.ssh"
 $privateKey = Join-Path $sshFolder "id_ed25519"
 $publicKey = "$privateKey.pub"
-$remoteUrl = "git@github.com:Grzeho1/inst.git"
+$remoteUrl = "git@github.com:Grzeho1/sql.git"
 
 if (-not (Test-Path $sshFolder)) {
     New-Item -ItemType Directory -Path $sshFolder -Force
@@ -74,9 +74,9 @@ $changes = git status --porcelain
 if ($changes) {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     git commit -m "Auto commit SQL změn - $timestamp"
-    $pushResult = git push origin main 2>&1
+    $pushResult = git push origin main --force 2>&1
 
-if ($LASTEXITCODE -eq 0) {ster
+if ($LASTEXITCODE -eq 0) {
     Write-Host "[OK] Změny byly odeslány na GitHub ." -ForegroundColor Green
 } else {
     Write-Host "[CHYBA] Push selhal:" -ForegroundColor Red

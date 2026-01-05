@@ -24,29 +24,23 @@ namespace inst
     public partial class MainWindow : Window
     {
         private DatabaseConnection _dbConnection;
-        private DatabaseConnection? _dbConnection2;
-        private DatabaseManager _dbManager; // ERPORT
-
-       //  private DatabaseManager _dbManager1; // Cílová Databáze načítá se z ConnectToTarget_Click
-       //  private readonly string _gitPushFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update","auto.ps1");
-       //  private readonly string _exportFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update","sql");
-       // private readonly string _exportFolderPath_Bal = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update 2","sql_Balikobot");
+        private DatabaseManager? _dbManager;
 
         private readonly string _solutionFolder = AppDomain.CurrentDomain.BaseDirectory;
-        private readonly string _gitPushFolder = GlobalConfig.Active.GitScriptPath;
-        private readonly string _exportFolderPath = GlobalConfig.Active.ExportFolderPath;
-        private readonly string sourceFolder;
+        private readonly string _gitPushFolder;
+        private readonly string _exportFolderPath;
         private readonly string outputFile;
 
-        private List<string>? _SavedObjectNames = null;  // Načtené objekty ze souboru.
-
-        private CancellationTokenSource _cancellationTokenSource; // Přerušení běžícího vlákna
+        private List<string>? _SavedObjectNames = null;
+        private CancellationTokenSource? _cancellationTokenSource;
    
 
         public MainWindow(DatabaseConnection dbConnection)
         {
             InitializeComponent();
-            
+
+            _gitPushFolder = GlobalConfig.Active.GitScriptPath;
+            _exportFolderPath = GlobalConfig.Active.ExportFolderPath;
             outputFile = Path.Combine(_solutionFolder, "Script", "Script.txt");
 
             _dbConnection = dbConnection;
@@ -60,29 +54,6 @@ namespace inst
 
             UpdateDatabaseStatus(_dbConnection, DbStatus);
             Console.WriteLine(_gitPushFolder, _exportFolderPath,GlobalConfig.Active);
-        }
-
-
-        /// <summary>
-        /// Aktualizuje status cílové databáze podle stavu připojení
-        /// 
-        /// </summary>
-        ///
-        public void UpdateTargetStatus()
-        {
-            Dispatcher.Invoke(() =>
-            {
-                if (_dbConnection2 != null && _dbConnection2.SelectedDatabase != null)
-                {
-                    TargetStatus.Text = $"Connected to {_dbConnection2.SelectedDatabase.Name}";
-                    TargetStatus.Foreground = Brushes.Green;
-                }
-                else
-                {
-                    TargetStatus.Text = "Disconnected";
-                    TargetStatus.Foreground = Brushes.Red;
-                }
-            });
         }
 
 
@@ -110,33 +81,30 @@ namespace inst
             // var objectNames = FileHelper.LoadObjectNames(); //Načtu Seznam objektů ze souboru
             var count = 0;
 
-            if (_SavedObjectNames == null)
+            if (_SavedObjectNames == null && _dbManager != null)
             {
-               // _SavedObjectNames = FileHelper.LoadObjectNames();
-                _SavedObjectNames = _dbManager.GetObjectsFromTable(token); // Načtu objekty z tabulky v databázi
+                _SavedObjectNames = _dbManager.GetObjectsFromTable(token);
             }
 
-            if (_SavedObjectNames.Count == 0)
+            if (_SavedObjectNames == null || _SavedObjectNames.Count == 0)
             {
                 MessageBox.Show("No objects found in file!", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-          
-
+            var savedObjects = _SavedObjectNames;
             await Task.Run(() =>
             {
-                foreach (var objName in _SavedObjectNames)
+                foreach (var objName in savedObjects)
                 {
-
                     if (token.IsCancellationRequested)
                     {
                         Console.WriteLine("přerušeno.");
-                        return; 
+                        return;
                     }
 
-                        var totalObjectsCount = _SavedObjectNames.Count;
-                    var obj = _dbManager.GetDatabaseObject(objName, token); //  Načtu objekt z databáze
+                    var totalObjectsCount = savedObjects.Count;
+                    var obj = _dbManager?.GetDatabaseObject(objName, token);
 
 
                     //  Aktualizuj UI
@@ -168,10 +136,15 @@ namespace inst
                 Directory.CreateDirectory(_exportFolderPath);
             }
 
-            //var objectNames = FileHelper.LoadObjectNames(); // Načteme seznam objektů ze souboru
+            if (_dbManager == null)
+            {
+                MessageBox.Show("Database manager not initialized.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             if (_SavedObjectNames == null)
             {
-                _SavedObjectNames = _dbManager.GetObjectsFromTable(_cancellationTokenSource.Token); // Načtu objekty z tabulky v databázi
+                _SavedObjectNames = _dbManager.GetObjectsFromTable(_cancellationTokenSource.Token);
             }
 
             if (_SavedObjectNames.Count == 0)
@@ -182,14 +155,12 @@ namespace inst
 
             await LoadDatabaseObjectsAsync(_cancellationTokenSource.Token);
 
-
             Console.WriteLine("Začínám export...");
+            var objectsToExport = _SavedObjectNames;
             await Task.Run(() =>
             {
-                var sortedObjects = _dbManager.GetOrderedObjects(_SavedObjectNames,_cancellationTokenSource.Token); // podle závislostí
-                _dbManager.ExportObjectsToFolder(_exportFolderPath, sortedObjects,_cancellationTokenSource.Token); //  Export 
-               // DeleteFromDirectory(sortedObjects);
-
+                var sortedObjects = _dbManager.GetOrderedObjects(objectsToExport, _cancellationTokenSource.Token);
+                _dbManager.ExportObjectsToFolder(_exportFolderPath, sortedObjects, _cancellationTokenSource.Token);
             });
 
             

@@ -16,30 +16,30 @@ namespace inst
 
         public async void InitializeDatabaseConnection()
         {
-            //if (GlobalConfig.SelectedKonektor == KonektorEnums.Konektor.Univerzal)
-            //{
-            //    _dbConnection = new DatabaseConnection(GlobalConfig.ServerIP, GlobalConfig.Active.Database, true);
-            //}
-            //else
-            //{
-            //    _dbConnection = new DatabaseConnection(GlobalConfig.ServerIP, GlobalConfig.Active.Database, true);
-            //}
-            _dbConnection = new DatabaseConnection(GlobalConfig.ServerIP, GlobalConfig.Active.Database, true);
-
-            UpdateStatus($"Connecting to server ");
-
-            bool isConnected = await Task.Run(() => _dbConnection.Connect());
-            if (isConnected)
+            try
             {
-                UpdateStatus("Connected to server, loading database");
+                _dbConnection = new DatabaseConnection(GlobalConfig.ServerIP, GlobalConfig.Active.Database, true);
 
-                MainWindow mainWindow = new MainWindow(_dbConnection);
-                mainWindow.Show();
-                this.Close();
+                UpdateStatus($"Connecting to {GlobalConfig.ServerIP}...");
+
+                bool isConnected = await Task.Run(() => _dbConnection.Connect());
+                if (isConnected)
+                {
+                    UpdateStatus("Connected to server, loading database");
+
+                    MainWindow mainWindow = new MainWindow(_dbConnection);
+                    mainWindow.Show();
+                    this.Close();
+                }
+                else
+                {
+                    MessageBox.Show("Chyba při připojení k databázi", "Chyba", MessageBoxButton.OK, MessageBoxImage.Error);
+                    this.Close();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("Chyba při připojení k databázi", "Chyba", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Chyba při připojení:\n{ex.Message}", "Chyba", MessageBoxButton.OK, MessageBoxImage.Error);
                 this.Close();
             }
         }

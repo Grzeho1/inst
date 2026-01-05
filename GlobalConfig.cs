@@ -14,9 +14,9 @@ namespace inst
 
     internal class ConfigValues
     {
-        public string Database { get; set; }
-        public string ExportFolderPath { get; set; }
-        public string GitScriptPath { get; set; }
+        public required string Database { get; set; }
+        public required string ExportFolderPath { get; set; }
+        public required string GitScriptPath { get; set; }
     }
 
 

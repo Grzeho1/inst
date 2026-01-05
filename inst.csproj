@@ -3,20 +3,14 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-	  <BaseOutputPathForPublish>$(MSBuildProjectDirectory)\bin\Publish</BaseOutputPathForPublish>
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
-	<Target Name="MoveDllsToLibFolder" AfterTargets="Publish">
-		<!-- Vytvoř podsložku 'lib' ve výstupní složce -->
-		<MakeDir Directories="$(PublishDir)\lib" Condition="!Exists('$(PublishDir)\lib')" />
-		<!-- Přesuň všechny DLL (kromě EXE) do podsložky 'lib' -->
-		<Move SourceFiles="$(PublishDir)\*.dll" DestinationFolder="$(PublishDir)\lib" Condition="Exists('$(PublishDir)\*.dll')" />
-		<!-- Přesuň případné další soubory (např. .resources.dll) -->
-		<Move SourceFiles="$(PublishDir)\**\*.dll" DestinationFolder="$(PublishDir)\lib" Condition="Exists('$(PublishDir)\**\*.dll')" />
-	</Target>
+
 
 	<ItemGroup>
 	  <Compile Remove="db-update\sql\**" />

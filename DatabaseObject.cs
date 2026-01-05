@@ -10,14 +10,9 @@ namespace inst
     
     public class DatabaseObject
     {
-      
         public string Name { get; set; }
-
         public string Type { get; set; }
-
-      
         public string Status { get; set; }
-
         public List<string> Dependencies { get; set; }
 
         public DatabaseObject(string name, string type, string status = "")
@@ -27,8 +22,6 @@ namespace inst
             Status = status;
             Dependencies = new List<string>();
         }
-        public DatabaseObject() { }
-
     }
 
 }

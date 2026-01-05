@@ -13,9 +13,7 @@ namespace inst
     public class DatabaseManager
     {
         private readonly DatabaseConnection _dbConnection;
-        //private Database? _database => _dbConnection.SelectedDatabase;
         private readonly Database _database;
-        private CancellationTokenSource _cancellationTokenSource;
         /// <summary>
         /// Initializes a new instance of the <see cref="DatabaseManager"/> class.
         /// </summary>
@@ -81,7 +79,7 @@ namespace inst
             int order = 1;
             foreach (var objName in sortedObjects)
             {
-                string sqlText = GetObjectText(objName);
+                string? sqlText = GetObjectText(objName);
 
                 if (!string.IsNullOrEmpty(sqlText))
                 {
@@ -147,10 +145,8 @@ namespace inst
         /// </summary>
         /// <param name="objectName">Název objektu databáze, který má být získán.</param>
         /// <returns>Objekt databáze, pokud je nalezen; jinak null.</returns>
-        public DatabaseObject GetDatabaseObject(string objectName, CancellationToken token)
+        public DatabaseObject? GetDatabaseObject(string objectName, CancellationToken token)
         {
-            
-
             if (token.IsCancellationRequested)
             {
                 Console.WriteLine("přerušeno.");
@@ -277,7 +273,7 @@ namespace inst
                     return objects;
                 }
 
-                string objectType = GetObjectType(objName);
+                string? objectType = GetObjectType(objName);
 
                 if (!string.IsNullOrEmpty(objectType))
                 {
@@ -293,11 +289,11 @@ namespace inst
         }
 
        
-        private string GetObjectType(string objectName)
+        private string? GetObjectType(string objectName)
         {
             string query = $@"
-                SELECT type_desc 
-                FROM sys.objects 
+                SELECT type_desc
+                FROM sys.objects
                 WHERE name = '{objectName}'
             ";
 
@@ -305,7 +301,9 @@ namespace inst
             if (dataset.Tables.Count == 0 || dataset.Tables[0].Rows.Count == 0)
                 return null;
 
-            string typeDesc = dataset.Tables[0].Rows[0]["type_desc"].ToString();
+            string? typeDesc = dataset.Tables[0].Rows[0]["type_desc"]?.ToString();
+            if (string.IsNullOrEmpty(typeDesc))
+                return null;
 
             if (typeDesc.Contains("PROCEDURE")) return "Stored Procedure";
             if (typeDesc.Contains("VIEW")) return "View";
@@ -333,8 +331,8 @@ namespace inst
 
                 foreach (System.Data.DataRow row in table.Rows)
                 {
-                    string dependency = row["referenced_entity_name"].ToString();
-                    if (objectNames.Contains(dependency)) //  Jen pokud je v seznamu exportovaných objektů
+                    string? dependency = row["referenced_entity_name"]?.ToString();
+                    if (!string.IsNullOrEmpty(dependency) && objectNames.Contains(dependency))
                     {
                         dependencies.Add(dependency);
                         Console.WriteLine($"{objectName} závisí na {dependency}");
@@ -351,11 +349,15 @@ namespace inst
             var databaseNames = new List<string>();
 
             var query = "SELECT name FROM sys.databases WHERE state_desc = 'ONLINE' AND name NOT IN ('master', 'tempdb', 'model', 'msdb')";
-            var result = _dbConnection.ServerInstance.ConnectionContext.ExecuteWithResults(query);
+            var result = _dbConnection.ServerInstance?.ConnectionContext.ExecuteWithResults(query);
+
+            if (result == null) return databaseNames;
 
             foreach (System.Data.DataRow row in result.Tables[0].Rows)
             {
-                databaseNames.Add(row["name"].ToString());
+                var name = row["name"]?.ToString();
+                if (!string.IsNullOrEmpty(name))
+                    databaseNames.Add(name);
             }
 
             return databaseNames;
