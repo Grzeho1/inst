@@ -7,7 +7,7 @@ $repoPath =$thisScriptDir
 $sshFolder = "$env:USERPROFILE\.ssh"
 $privateKey = Join-Path $sshFolder "id_ed25519"
 $publicKey = "$privateKey.pub"
-$remoteUrl = "git@github.com:Grzeho1/sql.git"
+$remoteUrl = "git@github.com:Grzeho1/inst.git"
 
 if (-not (Test-Path $sshFolder)) {
     New-Item -ItemType Directory -Path $sshFolder -Force
@@ -67,9 +67,7 @@ if ($remoteUrl -like "https://github.com/*") {
     Write-Host "[INFO] Remote přepnut na SSH: $sshUrl"
 }
 
-git add -A sql/ 2>$null
-git add -A Univerzal_SQL/
-git add -A Shoptet_SQL/
+git add -A
 
 $changes = git status --porcelain
 
@@ -78,7 +76,7 @@ if ($changes) {
     git commit -m "Auto commit SQL změn - $timestamp"
     $pushResult = git push origin main 2>&1
 
-if ($LASTEXITCODE -eq 0) {
+if ($LASTEXITCODE -eq 0) {ster
     Write-Host "[OK] Změny byly odeslány na GitHub ." -ForegroundColor Green
 } else {
     Write-Host "[CHYBA] Push selhal:" -ForegroundColor Red

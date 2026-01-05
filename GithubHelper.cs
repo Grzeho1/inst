@@ -28,8 +28,8 @@ namespace inst
 
             string konektorFolder = GlobalConfig.SelectedKonektor switch
             {
-                KonektorEnums.Konektor.Shoptet => "shoptet",
-                KonektorEnums.Konektor.Univerzal => "univerzal",
+                KonektorEnums.Konektor.Shoptet => "Shoptet_SQL",
+                KonektorEnums.Konektor.Univerzal => "Univerzal_SQL",
                 _ => throw new Exception("Neznámý konektor.")
             };
 

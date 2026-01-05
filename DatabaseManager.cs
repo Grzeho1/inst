@@ -75,7 +75,7 @@ namespace inst
                 Directory.CreateDirectory(exportFolderPath);
             }
 
-            var sortedObjects = GetOrderedObjects(objectNames, token);
+            var sortedObjects = GetOrderedObjects(objectNames, token).Distinct().ToList();
             HashSet<string> usedFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             int order = 1;
