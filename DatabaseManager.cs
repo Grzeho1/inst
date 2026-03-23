@@ -73,6 +73,18 @@ namespace inst
                 Directory.CreateDirectory(exportFolderPath);
             }
 
+            foreach (var existingFile in Directory.GetFiles(exportFolderPath, "*.sql", SearchOption.TopDirectoryOnly))
+            {
+                if (token.IsCancellationRequested)
+                {
+                    Console.WriteLine("přerušeno.");
+                    return;
+                }
+
+                File.Delete(existingFile);
+                Console.WriteLine($" Deleted old export: {existingFile}");
+            }
+
             var sortedObjects = GetOrderedObjects(objectNames, token).Distinct().ToList();
             HashSet<string> usedFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
