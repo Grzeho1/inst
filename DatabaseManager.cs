@@ -1,4 +1,4 @@
-﻿using Microsoft.SqlServer.Management.Smo;
+using Microsoft.SqlServer.Management.Smo;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -112,10 +112,10 @@ namespace inst
         private string? GetObjectText(string objectName)
         {
             string query = $@"
-        SELECT 
+        SELECT
             definition,
             CASE WHEN uses_quoted_identifier = 1 THEN 'SET QUOTED_IDENTIFIER ON;' ELSE 'SET QUOTED_IDENTIFIER OFF;' END AS quoted_identifier_setting
-        FROM sys.sql_modules 
+        FROM sys.sql_modules
         WHERE object_id = OBJECT_ID('{objectName}');
     ";
 
@@ -130,7 +130,7 @@ namespace inst
             string? definition = row["definition"]?.ToString();
             string? quotedIdentifierSetting = row["quoted_identifier_setting"]?.ToString();
 
-          
+
             if (string.IsNullOrWhiteSpace(definition))
                 return null;
 
@@ -159,10 +159,10 @@ namespace inst
                 return new DatabaseObject(objectName, "Stored Procedure", "FOUND");
             }
 
-            //  Hledám mezi triggery 
+            //  Hledám mezi triggery
             string triggerQuery = $@"
-                    SELECT name 
-                    FROM sys.triggers 
+                    SELECT name
+                    FROM sys.triggers
                     WHERE name = '{objectName}';
                     ";
 
@@ -192,11 +192,11 @@ namespace inst
             Dictionary<string, List<string>> adjacencyList = new Dictionary<string, List<string>>();
             Dictionary<string, int> inDegree = new Dictionary<string, int>();
 
-           
+
             //  Vytvoření grafu závislostí
             foreach (var obj in objects)
             {
-                
+
 
                 if (!adjacencyList.ContainsKey(obj.Name))
                     adjacencyList[obj.Name] = new List<string>();
@@ -231,7 +231,7 @@ namespace inst
                 }
             }
 
-            //  Topologické třídění 
+            //  Topologické třídění
             Queue<string> queue = new Queue<string>();
             foreach (var obj in inDegree)
             {
@@ -258,13 +258,13 @@ namespace inst
             return sortedObjects;
         }
 
-        
+
         public List<DatabaseObject> GetDatabaseObjectsWithDependencies(List<string> objectNames,CancellationToken token)
         {
             List<DatabaseObject> objects = new List<DatabaseObject>();
 
             Console.WriteLine("načítání objektů se závislostmi...");
-        
+
             foreach (var objName in objectNames)
             {
                 if (token.IsCancellationRequested)
@@ -288,7 +288,7 @@ namespace inst
             return objects;
         }
 
-       
+
         private string? GetObjectType(string objectName)
         {
             string query = $@"
@@ -312,17 +312,17 @@ namespace inst
             return null;
         }
 
-        
+
         private List<string> GetObjectDependencies(string objectName, List<string> objectNames)
         {
             List<string> dependencies = new List<string>();
 
             string query = $@"
-                SELECT referenced_entity_name 
-                FROM sys.sql_expression_dependencies 
+                SELECT referenced_entity_name
+                FROM sys.sql_expression_dependencies
                 WHERE referencing_id = OBJECT_ID('{objectName}')
             ";
-           
+
                 var dataset = _database.ExecuteWithResults(query);
                 if (dataset.Tables.Count == 0 || dataset.Tables[0].Rows.Count == 0)
                     return dependencies;
@@ -338,12 +338,12 @@ namespace inst
                         Console.WriteLine($"{objectName} závisí na {dependency}");
                     }
                 }
-            
-            
+
+
             return dependencies;
         }
 
-     
+
         public List<string> GetAllDatabases()
         {
             var databaseNames = new List<string>();
@@ -363,7 +363,7 @@ namespace inst
             return databaseNames;
         }
 
-       
+
         public List<string> GetObjectsFromTable(CancellationToken token)
         {
             var objectNames = new List<string>();
@@ -391,7 +391,7 @@ namespace inst
 
         }
 
-       
+
         public List<string> GetObjectsFromTable(string table, string column)
         {
             var objectNames = new List<string>();
@@ -412,6 +412,66 @@ namespace inst
 
             return objectNames;
 
+        }
+
+        public Dictionary<string, List<System.Data.DataRow>> GetMappingValues(int shopId, int defaultOrder)
+        {
+            // Tabulky kde filtrujeme i podle default_order
+            var tablesWithDefaultOrder = new[]
+            {
+                "COAL_orderHeader_mapping",
+                "COAL_orderHeader_mapping_ext",
+                "COAL_orderProducts_mapping",
+                "COAL_payOrder_mapping",
+                "COAL_orderProducts_mapping_ext",
+            };
+
+            // Tabulky bez default_order (jen podle id_externi_shop)
+            var tablesWithoutDefaultOrder = new[]
+            {
+                ("Coal_shoptetProductMap",         "id_externi_shop"),
+                ("COAL_createCompany_mapping_ext", "id_externi_shop"),
+                ("COAL_createCompany_mapping",     "id_externi_shop"),
+                ("COAL_createProduct_mapping",     "id_externi_shop"),
+                ("COAL_createProduct_mapping_ext", "id_externi_shop"),
+                ("Coal_tabkmen_ext_mapping",       "IDCoalshop"),
+            };
+
+            var result = new Dictionary<string, List<System.Data.DataRow>>();
+
+            foreach (var table in tablesWithDefaultOrder)
+            {
+                try
+                {
+                    string query = $"SELECT * FROM {table} WHERE id_externi_shop = {shopId} AND default_order = {defaultOrder}";
+                    var dataset = _database.ExecuteWithResults(query);
+                    result[table] = dataset.Tables.Count > 0
+                        ? dataset.Tables[0].Rows.Cast<System.Data.DataRow>().ToList()
+                        : new List<System.Data.DataRow>();
+                }
+                catch
+                {
+                    result[table] = new List<System.Data.DataRow>();
+                }
+            }
+
+            foreach (var (table, idCol) in tablesWithoutDefaultOrder)
+            {
+                try
+                {
+                    string query = $"SELECT * FROM {table} WHERE {idCol} = {shopId}";
+                    var dataset = _database.ExecuteWithResults(query);
+                    result[table] = dataset.Tables.Count > 0
+                        ? dataset.Tables[0].Rows.Cast<System.Data.DataRow>().ToList()
+                        : new List<System.Data.DataRow>();
+                }
+                catch
+                {
+                    result[table] = new List<System.Data.DataRow>();
+                }
+            }
+
+            return result;
         }
 
 

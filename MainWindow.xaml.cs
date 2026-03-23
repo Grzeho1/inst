@@ -1,4 +1,4 @@
-﻿using inst.Enums;
+using inst.Enums;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -26,14 +26,13 @@ namespace inst
         private DatabaseConnection _dbConnection;
         private DatabaseManager? _dbManager;
 
-        private readonly string _solutionFolder = AppDomain.CurrentDomain.BaseDirectory;
         private readonly string _gitPushFolder;
         private readonly string _exportFolderPath;
-        private readonly string outputFile;
 
         private List<string>? _SavedObjectNames = null;
         private CancellationTokenSource? _cancellationTokenSource;
-   
+        
+
 
         public MainWindow(DatabaseConnection dbConnection)
         {
@@ -41,7 +40,6 @@ namespace inst
 
             _gitPushFolder = GlobalConfig.Active.GitScriptPath;
             _exportFolderPath = GlobalConfig.Active.ExportFolderPath;
-            outputFile = Path.Combine(_solutionFolder, "Script", "Script.txt");
 
             _dbConnection = dbConnection;
             bool isConnected = _dbConnection.CheckConnectionStatus();
@@ -163,7 +161,7 @@ namespace inst
                 _dbManager.ExportObjectsToFolder(_exportFolderPath, sortedObjects, _cancellationTokenSource.Token);
             });
 
-            
+
 
             Console.WriteLine("Export dokončen.");
 
@@ -197,7 +195,7 @@ namespace inst
 
         private void ConnectToTarget_Click(object sender, RoutedEventArgs e)
         {
-            
+
             //targetServerName = TargetDbServer.Text.Trim();
             //targetDatabaseName = TargetDbName.Text.Trim();
 
@@ -225,10 +223,10 @@ namespace inst
         {
             _cancellationTokenSource?.Cancel(); // Zruší běžící úlohu, pokud je.
 
-            
+
             _dbConnection?.DisconnectAsync();
             base.OnClosed(e);
-           
+
         }
 
         private void openFolder_Click(object sender, RoutedEventArgs e)
@@ -258,7 +256,7 @@ namespace inst
             _dbConnection.Disconect();
 
             this.Close();
-            
+
         }
 
         private void Grid_MouseDown(object sender, MouseButtonEventArgs e)
@@ -274,257 +272,175 @@ namespace inst
             LoginWindow loginWindow = new LoginWindow();
             loginWindow.ShowDialog();
 
-           
+
         }
 
         private async void GenerateScript_Click(object sender, RoutedEventArgs e)
         {
-            string idShop = ShopIdInput.Text;
-            // Tady je celý SQL skript, který se vygeneruje, je potřeba to časem předělat.
-            string sqlMapping = $@"
- DECLARE @IDShop INT = {idShop};
+            string templateShopIdText = TemplateShopIdInput.Text.Trim();
+            string newShopId = ShopIdInput.Text.Trim();
 
- BEGIN TRY
- BEGIN TRANSACTION
- --IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Coal_shoptetProductMap')
- BEGIN
-     INSERT INTO Coal_shoptetProductMap
-     (
-         id_externi_shop, name, description, productUrl, guid, adminUrl,
-         visibility, Autor, DatPorizeni,BlokovaniEditoru,
-         isbn, plu, mpn, shortDescription, availability, shopUpdated, 
-         brandCode, code, metaDescription, packagingId, packagingAmount, 
-         measureID, measureAmount, amountDecimalPlaces
-     )
-     VALUES
-     (
-         @IDSHop, 'tabkmenzbozi.nazev1', 'tabkmenzbozi.poznamka', 
-         'tabkmenzbozi_ext._COAL_URL_Produktu', 'tabkmenzbozi_ext._COAL_idShop', 
-         'tabkmenzbozi_ext._COAL_Origin_code', 'tabkmenzbozi_ext._COAL_Visibility', 
-         SYSTEM_USER, GETDATE(),  
-          NULL, 'tabkmenzbozi_ext._COAL_isbn', 
-         'TabKmenZbozi.RegCis', 'TabKmenZbozi.RegCis', 
-         'tabkmenzbozi_ext._COAL_price99', 'tabkmenzbozi_ext._COAL_dostupnostproCore', 
-         'tabkmenzbozi_ext._COAL_datumzmenyproCore', 'tabkmenzbozi_ext._COAL_brandCode', 
-         'tabkmenzbozi_ext._COAL_puvodniCODE', 'tabkmenzbozi_ext._COAL_metadescription', 
-         'TabKmenZbozi_ext._COAL_packagingId', 'TabKmenZbozi_ext._COAL_packagingAmount', 
-         'TabKmenZbozi_ext._COAL_measureID', 'TabKmenZbozi_ext._COAL_measureAmount', 
-         'tabkmenzbozi_ext._COAL_amountDecimalPlaces'
-     )
- END
+            if (!int.TryParse(templateShopIdText, out int templateShopId))
+            {
+                MessageBox.Show("Zadej platné Template ShopID.", "Chyba", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
- --IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'COAL_orderHeader_mapping')
- BEGIN
- INSERT INTO COAL_orderHeader_mapping
- (id_externi_shop,note,deliveryDate,Autor,DatPorizeni,BlokovaniEditoru,orderNumber,default_order,note3)
- VALUES(@IDSHop,'VerejnaPoznamka','DatumDodavky',SYSTEM_USER,GETDATE(),null,'ExterniCislo',1,'code3')
- END
+            if (string.IsNullOrEmpty(newShopId))
+            {
+                MessageBox.Show("Zadej nové Shop ID.", "Chyba", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
- IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'COAL_orderHeader_mapping_ext')
- BEGIN
-   INSERT INTO COAL_orderHeader_mapping_ext
-     (
-         deliveryTime, email, transportPrice, transportVat, variableSymbol,
-         fullName, lastName, street, zip, city, phone, weight, Autor, DatPorizeni, 
-         BlokovaniEditoru, id_externi_shop, houseNumber, deliveryName,
-         deliveryStreet, deliveryStreetNo, deliveryCity, deliveryZip, deliveryCountry,
-         deliveryCompany, idSubscription, orderURL, default_order, code3, PlaceOfCollection
-     )
-     VALUES
-     (
-         '_COAL_CasDoruceni', '_COAL_f_mail', '_COAL_CenaDopravy', '_COAL_transportVat',
-         '_COAL_VariabilSymbol', '_COAL_f_jmenoprijmeni', '_COAL_f_lastName', '_COAL_f_ulice',
-         '_COAL_f_psc', '_COAL_f_mesto', '_COAL_f_tel', '_COAL_weight', SYSTEM_USER, GETDATE(),
-         NULL, @IDSHop, '_COAL_f_cp',
-         '_COAL_d_jmenoprijmeni', '_COAL_d_ulice', '_COAL_d_cp', '_COAL_d_mesto', '_COAL_d_psc', '_COAL_d_zeme', '_COAL_d_firma', '_COAL_idSubscription','_COAL_adminurl', 0,'_code3',
-         '_Balikobot_branch_id'
-     )
- END
+            if (_dbManager == null)
+            {
+                MessageBox.Show("Database manager not initialized.", "Chyba", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
- --IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'COAL_createCompany_mapping_ext')
- BEGIN
- INSERT INTO COAL_createCompany_mapping_ext(Autor,DatPorizeni,BlokovaniEditoru,id_externi_shop,potential,priority,code,newsletter,reverseCharge,approved)
- VALUES(SYSTEM_USER,GETDATE(),null,@IDSHop,'_COAL_Neregistrovany', '_COAL_priority','_COAL_code', '_COAL_newsletter','_COAL_reverseCharge','_COAL_approved')
- END
- --IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'COAL_createCompany_mapping')
- BEGIN
- INSERT INTO COAL_createCompany_mapping   (
-          id_externi_shop, name, fullName, firstName, lastName, Autor, DatPorizeni, 
-         BlokovaniEditoru, street, houseNumber, zip, city, status, note
-     )
-     VALUES
-     (
-          @IDShop, 'Nazev', 'DruhyNazev', 'Jmeno', 'Prijmeni', SYSTEM_USER, GETDATE(),
-          NULL, 'Ulice', 'PopCislo', 
-         'PSC', 'Misto', 'Stav', 'Poznamka'
-     )
- END
- --IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'COAL_createProduct_mapping')
- BEGIN
- INSERT INTO COAL_createProduct_mapping
-     (
-         id_externi_shop, Autor, DatPorizeni, BlokovaniEditoru, name, volume, 
-         width, height, depth, weight
-     )
-     VALUES
-     (
-         @IDShop, SYSTEM_USER, GETDATE(), NULL, 'Nazev1', 
-         'Objem', 'Sirka', 'Vyska', 'Hloubka', 'Hmotnost'
-     )
- END
- --IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'COAL_createProduct_mapping_ext')
- BEGIN
-   INSERT INTO COAL_createProduct_mapping_ext
-     (
-         id_externi_shop, Autor, DatPorizeni, extID, price99, 
-         seoKeyword, stock
-     )
-     VALUES
-     (
-         @IDShop, SYSTEM_USER, GETDATE(), '_COAL_extID', '_COAL_price99', 
-         '_COAL_seoKeyword', '_COAL_stock'
-     )
- END
- --IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'COAL_orderProducts_mapping')
- BEGIN
-  INSERT INTO COAL_orderProducts_mapping
-    (
-         id_externi_shop, name, note, productCode, Autor, DatPorizeni, 
-         BlokovaniEditoru, default_order
-     )
-     VALUES
-     (
-         @IDShop, 'Nazev1', 'Poznamka', 'RegCis', SYSTEM_USER, GETDATE(), 
-         NULL, 1
-     )
+            int defaultOrder = RadioEP.IsChecked == true ? 0 : 1;
 
- END
- --IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'COAL_payOrder_mapping')
- BEGIN
-  INSERT INTO COAL_payOrder_mapping
-  (
-         id_externi_shop, Autor, DatPorizeni, BlokovaniEditoru, ispaid, 
-         variableSymbol, datePayment, default_order
-     )
-     VALUES
-     (
-         @IDShop, SYSTEM_USER, GETDATE(), NULL, '_COAL_zaplacena', 
-         '_COAL_VariabilSymbol', '_COAL_datumZaplaceni', 1
-     )
- END
- --IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'COAL_orderProducts_mapping_ext')
- BEGIN
+            var mappingData = await Task.Run(() => _dbManager.GetMappingValues(templateShopId, defaultOrder));
+            string sqlMapping = BuildSqlScript(newShopId, mappingData);
 
-  INSERT INTO COAL_orderProducts_mapping_ext
- (guid,Autor,DatPorizeni,BlokovaniEditoru,id_externi_shop,default_order)
- VALUES('_COAL_idshop',SYSTEM_USER,GETDATE(),null,@IDSHop,1)
- END
- --IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Coal_tabkmen_ext_mapping')
- BEGIN
-
-  INSERT INTO Coal_tabkmen_ext_mapping
-  (
-         IDCoalshop, COAL_URL_produktu, COAL_idShop, COAL_origin_code, COAL_visibility,
-         Autor, DatPorizeni, BlokovaniEditoru, COAL_puvodniCODE, nazev1
-     )
-     VALUES
-     (
-         @IDSHop, '_COAL_URL_produktu2', '_COAL_idShop2', '_COAL_origin_code2', 
-         '_COAL_Visibility2', SYSTEM_USER, GETDATE(), NULL, '', 'nazev1'
-     )
- END
-  COMMIT TRANSACTION;
-
- END TRY
-
- BEGIN CATCH
-     ROLLBACK TRANSACTION; -- Zrušení změn při chybě
-
-     -- Vyhození chyby pro další zpracování
-     DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
-     DECLARE @ErrorSev INT = ERROR_SEVERITY();
-     DECLARE @ErrorState INT = ERROR_STATE();
-     RAISERROR (@ErrorMessage, @ErrorSev, @ErrorState);
-                END CATCH;";   
-            // Přiřazení textu do výstupního TextBoxu
-            
             GeneratedScriptBox.Document.Blocks.Clear();
             GeneratedScriptBox.Document.Blocks.Add(new Paragraph(new Run(sqlMapping)));
             await HighlightSQL();
 
-            Clipboard.SetText(sqlMapping); 
+            Clipboard.SetText(sqlMapping);
         }
 
-
-        private Task HighlightSQL()
+        private static string BuildInsert(string tableName, string shopIdCol, string newShopId, System.Data.DataRow row)
         {
-           
-            string sqlText = new TextRange(GeneratedScriptBox.Document.ContentStart, GeneratedScriptBox.Document.ContentEnd).Text;
+            var skipCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                { "ID", "Autor", "DatPorizeni", "BlokovaniEditoru", "DatZmeny", "DatVytvoreni", "Zmenil" };
 
-          
-            GeneratedScriptBox.Document.Blocks.Clear();
+            var cols = new List<string>();
+            var vals = new List<string>();
 
-           
-            Paragraph paragraph = new Paragraph();
-            paragraph.Margin = new System.Windows.Thickness(0); 
-
-            
-            string keywords = @"\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|INNER|LEFT|RIGHT|ON|AND|OR|NOT|NULL|AS|IN|BEGIN|END|TRANSACTION|ROLLBACK|COMMIT|TRY|CATCH|DECLARE|VALUES|SET|CASE|WHEN|THEN|ELSE)\b";
-            string functions = @"\b(COUNT|SUM|AVG|MIN|MAX|LEN|GETDATE|NOW|DATEDIFF|CAST|CONVERT|ISNULL|COALESCE|ROUND|SUBSTRING|CHARINDEX|REPLACE|LTRIM|RTRIM|UPPER|LOWER)\b";
-            string strings = @"'([^']*)'"; 
-            string comments = @"(--.*?$)|(/\*[\s\S]*?\*/)"; 
-
-           
-            foreach (string line in sqlText.Split('\n'))
+            foreach (System.Data.DataColumn col in row.Table.Columns)
             {
-                int index = 0;
-                while (index < line.Length)
-                {
-                    Run run = new Run();
-                    Match keywordMatch = Regex.Match(line.Substring(index), keywords, RegexOptions.IgnoreCase);
-                    Match functionMatch = Regex.Match(line.Substring(index), functions, RegexOptions.IgnoreCase);
-                    Match stringMatch = Regex.Match(line.Substring(index), strings);
-                    Match commentMatch = Regex.Match(line.Substring(index), comments, RegexOptions.Multiline);
+                if (skipCols.Contains(col.ColumnName)) continue;
 
-                    if (keywordMatch.Success && keywordMatch.Index == 0)
+                cols.Add(col.ColumnName);
+
+                if (col.ColumnName.Equals(shopIdCol, StringComparison.OrdinalIgnoreCase))
+                {
+                    vals.Add("@IDShop");
+                }
+                else
+                {
+                    var raw = row[col];
+                    if (raw == null || raw == DBNull.Value)
                     {
-                        run.Text = keywordMatch.Value;
-                        run.Foreground = Brushes.Blue;
-                        index += keywordMatch.Length;
+                        vals.Add("NULL");
                     }
-                    else if (functionMatch.Success && functionMatch.Index == 0)
+                    else if (col.DataType == typeof(int) || col.DataType == typeof(long) ||
+                             col.DataType == typeof(short) || col.DataType == typeof(decimal) ||
+                             col.DataType == typeof(double) || col.DataType == typeof(float))
                     {
-                        run.Text = functionMatch.Value;
-                        run.Foreground = Brushes.Purple;
-                        index += functionMatch.Length;
-                    }
-                    else if (stringMatch.Success && stringMatch.Index == 0)
-                    {
-                        run.Text = stringMatch.Value;
-                        run.Foreground = Brushes.Brown;
-                        index += stringMatch.Length;
-                    }
-                    else if (commentMatch.Success && commentMatch.Index == 0)
-                    {
-                        run.Text = commentMatch.Value;
-                        run.Foreground = Brushes.Green;
-                        index += commentMatch.Length;
+                        vals.Add(raw.ToString()!);
                     }
                     else
                     {
-                        run.Text = line[index].ToString();
-                        run.Foreground = Brushes.Black;
-                        index++;
+                        vals.Add($"'{raw.ToString()!.Replace("'", "''")}'");
                     }
-
-                    paragraph.Inlines.Add(run);
                 }
-
-                
-                paragraph.Inlines.Add(new LineBreak());
             }
 
-            FlowDocument doc = new FlowDocument(paragraph);
+            return $"INSERT INTO {tableName}\n    ({string.Join(", ", cols)})\nVALUES\n    ({string.Join(", ", vals)})";
+        }
+
+        private static string BuildSqlScript(string newShopId, Dictionary<string, List<System.Data.DataRow>> data)
+        {
+            var tabkmenShopCol = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                { "Coal_tabkmen_ext_mapping" };
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"DECLARE @IDShop INT = {newShopId};");
+            sb.AppendLine();
+            sb.AppendLine("BEGIN TRY");
+            sb.AppendLine("BEGIN TRANSACTION");
+
+            foreach (var (table, rows) in data)
+            {
+                if (rows.Count == 0) continue;
+
+                string shopIdCol = tabkmenShopCol.Contains(table) ? "IDCoalshop" : "id_externi_shop";
+
+                sb.AppendLine();
+                sb.AppendLine($"-- {table}");
+                sb.AppendLine("BEGIN");
+                foreach (var row in rows)
+                    sb.AppendLine(BuildInsert(table, shopIdCol, newShopId, row));
+                sb.AppendLine("END");
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("COMMIT TRANSACTION;");
+            sb.AppendLine();
+            sb.AppendLine("END TRY");
+            sb.AppendLine("BEGIN CATCH");
+            sb.AppendLine("    ROLLBACK TRANSACTION;");
+            sb.AppendLine("    DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();");
+            sb.AppendLine("    DECLARE @ErrorSev INT = ERROR_SEVERITY();");
+            sb.AppendLine("    DECLARE @ErrorState INT = ERROR_STATE();");
+            sb.AppendLine("    RAISERROR (@ErrorMessage, @ErrorSev, @ErrorState);");
+            sb.AppendLine("END CATCH;");
+
+            return sb.ToString();
+        }
+
+        private Task HighlightSQL()
+        {
+            string sqlText = new TextRange(GeneratedScriptBox.Document.ContentStart, GeneratedScriptBox.Document.ContentEnd).Text;
+
+            // Vypočítej všechny barevné spany najednou na celém textu
+            var spans = new List<(int Start, int End, Brush Color)>();
+            foreach (Match m in SqlKeywords.Matches(sqlText))
+                spans.Add((m.Index, m.Index + m.Length, Brushes.Blue));
+            foreach (Match m in SqlFunctions.Matches(sqlText))
+                spans.Add((m.Index, m.Index + m.Length, Brushes.Purple));
+            foreach (Match m in SqlStrings.Matches(sqlText))
+                spans.Add((m.Index, m.Index + m.Length, Brushes.Brown));
+            foreach (Match m in SqlComments.Matches(sqlText))
+                spans.Add((m.Index, m.Index + m.Length, Brushes.Green));
+
+            // Seřaď a odstraň překryvy (první match vyhrává)
+            spans.Sort((a, b) => a.Start.CompareTo(b.Start));
+            var filtered = new List<(int Start, int End, Brush Color)>();
+            int lastEnd = 0;
+            foreach (var s in spans)
+            {
+                if (s.Start >= lastEnd) { filtered.Add(s); lastEnd = s.End; }
+            }
+
+            // Sestav paragraph — minimální počet Run elementů
+            var paragraph = new Paragraph { Margin = new System.Windows.Thickness(0) };
+
+            void AddText(string text, Brush brush)
+            {
+                string[] lines = text.Split('\n');
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string part = lines[i].TrimEnd('\r');
+                    if (part.Length > 0)
+                        paragraph.Inlines.Add(new Run(part) { Foreground = brush });
+                    if (i < lines.Length - 1)
+                        paragraph.Inlines.Add(new LineBreak());
+                }
+            }
+
+            int pos = 0;
+            foreach (var (start, end, color) in filtered)
+            {
+                if (start > pos) AddText(sqlText[pos..start], Brushes.Black);
+                AddText(sqlText[start..end], color);
+                pos = end;
+            }
+            if (pos < sqlText.Length) AddText(sqlText[pos..], Brushes.Black);
+
+            var doc = new FlowDocument(paragraph);
             doc.Blocks.Clear();
             doc.Blocks.Add(paragraph);
             GeneratedScriptBox.Document = doc;
@@ -559,10 +475,10 @@ namespace inst
                 {
                     FileName = "powershell.exe",
                     Arguments = $"-ExecutionPolicy Bypass -File \"{path}\"",
-                    UseShellExecute = true, 
-                    RedirectStandardOutput = false, 
+                    UseShellExecute = true,
+                    RedirectStandardOutput = false,
                     RedirectStandardError = false,
-                    CreateNoWindow = false 
+                    CreateNoWindow = false
                 };
 
                 using (Process process = new Process { StartInfo = processInfo })
@@ -574,7 +490,7 @@ namespace inst
                     string errors = process.StandardError.ReadToEnd();
 
                     process.WaitForExit();
-                    
+
 
                     // Zobrazení výstupu
                     if (!string.IsNullOrEmpty(output))
@@ -614,6 +530,10 @@ namespace inst
 
 
 
+        private static readonly Regex SqlKeywords  = new(@"\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|INNER|LEFT|RIGHT|ON|AND|OR|NOT|NULL|AS|IN|BEGIN|END|TRANSACTION|ROLLBACK|COMMIT|TRY|CATCH|DECLARE|VALUES|SET|CASE|WHEN|THEN|ELSE)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex SqlFunctions = new(@"\b(COUNT|SUM|AVG|MIN|MAX|LEN|GETDATE|NOW|DATEDIFF|CAST|CONVERT|ISNULL|COALESCE|ROUND|SUBSTRING|CHARINDEX|REPLACE|LTRIM|RTRIM|UPPER|LOWER)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex SqlStrings   = new(@"'[^']*'", RegexOptions.Compiled);
+        private static readonly Regex SqlComments  = new(@"(--.*?$)|(/\*[\s\S]*?\*/)", RegexOptions.Multiline | RegexOptions.Compiled);
     }
 
 
