@@ -146,15 +146,10 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <StackPanel Orientation="Vertical" HorizontalAlignment="Left" Margin="0,10,0,414" Grid.Column="1" Grid.RowSpan="2" Width="137" Grid.ColumnSpan="2">
-                                <CheckBox x:Name="checkBoxBalikobot" Width="100" Margin="10,5,10,1" Content="Balikobot"/>
-
-                                <CheckBox x:Name="ExportType2" Width="100" Margin="10,5,10,1" Content="Sleva/dárky"/>
-                            </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="277,10,0,10" Grid.Column="2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="10,10,10,10" Grid.Column="2">
 
                                 <Button Content="Load SQL" Click="ExportSql_Click" ToolTip="Načte a porovná seznam objektu z databáze" Style="{StaticResource MainButtonStyle}"/>
+                                <Button Content="Stop" Margin="10,0,0,0" Click="Cancel_Click" ToolTip="Zruší probíhající operaci" Style="{StaticResource MainButtonStyle}"/>
                                 <Button Content="Export SQL" ToolTip="Vytvoří jeden SQL script a uloži se do souboru 'Script'" Margin="10,0,0,0" Click="MergeSql_Click" Style="{StaticResource MainButtonStyle}"/>
                                 <Button Content="Open Folder" Margin="10,0,0,0" ToolTip="Otevře složku s vyexportovanými scripty z Load SQL" Click="openFolder_Click" Style="{StaticResource MainButtonStyle}"/>
                                 <Button Content="Update Git" Margin="10,0,0,0" ToolTip="Odešle scripty do repozitáře" Click="UpdateGit_Click" Style="{StaticResource MainButtonStyle}"/>
@@ -196,57 +191,73 @@
 
 
 
-                    <TabItem Header="Import" Foreground="White">
+
+
+                    <!-- Update Tab -->
+                    <TabItem Header="Update" Foreground="White">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <!-- Login Button -->
-                            <Button Content="Login" HorizontalAlignment="Center" Margin="10" 
-                Click="OpenLoginWindow_Click" Style="{StaticResource MainButtonStyle}"/>
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10">
+                                <Button Content="Load Objects" Click="LoadUpdateObjects_Click" Style="{StaticResource MainButtonStyle}"/>
+                                <Button Content="Select All" Margin="10,0,0,0" Click="SelectAllUpdate_Click" Style="{StaticResource MainButtonStyle}"/>
+                                <Button Content="Clear Selection" Margin="10,0,0,0" Click="SelectNoneUpdate_Click" Style="{StaticResource MainButtonStyle}"/>
+                                <Button Content="Generate Update Script" Margin="10,0,0,0" Click="GenerateUpdateScript_Click" Style="{StaticResource MainButtonStyle}"/>
+                                <Button Content="Stop" Margin="10,0,0,0" Click="Cancel_Click" ToolTip="Cancel running operation" Style="{StaticResource MainButtonStyle}"/>
+                                <Button Content="Open Folder" Margin="10,0,0,0" Click="OpenUpdateFolder_Click" Style="{StaticResource MainButtonStyle}"/>
+                            </StackPanel>
 
-                            <!-- Import Button (Disabled until login) -->
-                            <Button Content="Import SQL" HorizontalAlignment="Center" Margin="10"
-                Grid.Row="1" Style="{StaticResource MainButtonStyle}" 
-                x:Name="ImportSqlButton" IsEnabled="False"/>
-
-                            <ListView x:Name="ImportLog" Grid.Row="2">
+                            <ListView x:Name="UpdateObjectList" Grid.Row="1" Margin="10">
                                 <ListView.View>
                                     <GridView>
-                                        <GridViewColumn Header="File Name" Width="400" DisplayMemberBinding="{Binding FileName}"/>
-                                        <GridViewColumn Header="Status" Width="150" DisplayMemberBinding="{Binding Status}"/>
+                                        <GridViewColumn Header="" Width="30">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="Name" Width="380" DisplayMemberBinding="{Binding Name}"/>
+                                        <GridViewColumn Header="Type" Width="180" DisplayMemberBinding="{Binding Type}"/>
                                     </GridView>
                                 </ListView.View>
                             </ListView>
+
+                            <Label x:Name="UpdateStatus" Grid.Row="2" Content="" Margin="10,0,10,10"/>
                         </Grid>
                     </TabItem>
-
 
                     <!-- Mapping Tab -->
                     <TabItem Header="Mapping" Foreground="White">
                         <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="33*"/>
-                                <ColumnDefinition Width="769*"/>
-                            </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,38" Grid.RowSpan="3">
-                                <Label Content="Enter SHOP_ID:"/>
-                                <TextBox x:Name="ShopIdInput" Width="166"/>
-                            </StackPanel>
-                            <Button x:Name="GenerateScript" Content="Generate &amp; copy" Margin="525,33,0,0" Style="{StaticResource MainButtonStyle}" Click="GenerateScript_Click" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="1"/>
-                            <Label Content="Generated Script:" Grid.Row="2" Margin="0,10,0,0" Grid.ColumnSpan="2"/>
-                            <RichTextBox x:Name="GeneratedScriptBox" Grid.Row="3" IsReadOnly="True" VerticalScrollBarVisibility="Auto" Margin="5,5,5,41" Grid.RowSpan="2" Grid.ColumnSpan="2"/>
 
-                            <!--<Button Content="Copy" Grid.Row="4" Margin="0,329,0,0" Style="{StaticResource MainButtonStyle}" VerticalAlignment="Top"/>-->
+                            <!-- Row 0: Typ + Template ShopID + Nové ShopID + Generate -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5,10,5,5">
+                                <Label Content="Typ:" VerticalAlignment="Center"/>
+                                <RadioButton x:Name="RadioEP" Content="EP" IsChecked="True" VerticalAlignment="Center" Margin="5,0"/>
+                                <RadioButton x:Name="RadioDO" Content="DO" VerticalAlignment="Center" Margin="5,0"/>
+                                <Label Content="Template ShopID:" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                <ComboBox x:Name="TemplateShopIdInput" Width="180" Height="28" VerticalAlignment="Center" Margin="5,0"
+                                          DisplayMemberPath="Nazev" SelectedValuePath="Id" ToolTip="Vyber template shop"/>
+                                <Label Content="Nové ShopID:" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                <TextBox x:Name="ShopIdInput" Width="90" Height="28" VerticalAlignment="Center" Margin="5,0"/>
+                                <Button x:Name="GenerateScript" Content="Generate &amp; copy" Margin="15,0,0,0" Style="{StaticResource MainButtonStyle}" Click="GenerateScript_Click" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Row 1: Label -->
+                            <Label Content="Generated Script:" Grid.Row="1" Margin="5,0"/>
+
+                            <!-- Row 2: Script box -->
+                            <RichTextBox x:Name="GeneratedScriptBox" Grid.Row="2" IsReadOnly="True" VerticalScrollBarVisibility="Auto" Margin="5"/>
                         </Grid>
                     </TabItem>
                 </TabControl>

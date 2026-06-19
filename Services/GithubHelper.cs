@@ -15,7 +15,6 @@ namespace inst
         private readonly string _folderToCommit;
         private readonly string _remoteUrl = "git@github.com:Grzeho1/sql.git";
         private readonly string _branch = "main";
-        private readonly string _relativeFolder;
 
         private string SshFolder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh");
         private string PrivateKey => Path.Combine(SshFolder, "id_ed25519");
@@ -24,8 +23,6 @@ namespace inst
 
         public GithubHelper()
         {
-            _repoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update");
-
             string konektorFolder = GlobalConfig.SelectedKonektor switch
             {
                 KonektorEnums.Konektor.Shoptet => "Shoptet_SQL",
@@ -33,6 +30,8 @@ namespace inst
                 _ => throw new Exception("Neznámý konektor.")
             };
 
+            // Git repo je v db-update/, pushujeme složku Shoptet_SQL/ nebo Univerzal_SQL/
+            _repoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update");
             _folderToCommit = konektorFolder;
         }
         public void Run()
@@ -116,6 +115,7 @@ namespace inst
                 return;
             }
 
+            // Přidej pouze složku s SQL soubory (Shoptet_SQL nebo Univerzal_SQL)
             Run("git", $"add \"{_folderToCommit}\"");
             string changes = RunOutput("git", "status --porcelain");
 
