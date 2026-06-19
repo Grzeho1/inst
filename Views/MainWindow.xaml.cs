@@ -28,9 +28,12 @@ namespace inst
 
         private readonly string _gitPushFolder;
         private readonly string _exportFolderPath;
+        private readonly string _updateFolderPath;
 
         private List<string>? _SavedObjectNames = null;
         private CancellationTokenSource? _cancellationTokenSource;
+
+        private readonly ObservableCollection<SelectableObject> _updateObjects = new ObservableCollection<SelectableObject>();
         
 
 
@@ -40,6 +43,9 @@ namespace inst
 
             _gitPushFolder = GlobalConfig.Active.GitScriptPath;
             _exportFolderPath = GlobalConfig.Active.ExportFolderPath;
+            _updateFolderPath = GlobalConfig.Active.UpdateFolderPath;
+
+            UpdateObjectList.ItemsSource = _updateObjects;
 
             _dbConnection = dbConnection;
             bool isConnected = _dbConnection.CheckConnectionStatus();
@@ -48,6 +54,7 @@ namespace inst
             {
                 _dbManager = new DatabaseManager(_dbConnection);
                 DatabaseSelector.ItemsSource = _dbManager.GetAllDatabases();
+                LoadCoalshops();
             }
 
             UpdateDatabaseStatus(_dbConnection, DbStatus);
@@ -123,9 +130,21 @@ namespace inst
             });
         }
 
+        private void Cancel_Click(object sender, RoutedEventArgs e)
+        {
+            _cancellationTokenSource?.Cancel();
+        }
+
+        private CancellationToken RenewCts()
+        {
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = new CancellationTokenSource();
+            return _cancellationTokenSource.Token;
+        }
+
         private async void ExportSql_Click(object sender, RoutedEventArgs e)
         {
-            _cancellationTokenSource = new CancellationTokenSource();
+            var token = RenewCts();
 
             ExportLog.Items.Clear();
 
@@ -142,7 +161,7 @@ namespace inst
 
             if (_SavedObjectNames == null)
             {
-                _SavedObjectNames = _dbManager.GetObjectsFromTable(_cancellationTokenSource.Token);
+                _SavedObjectNames = _dbManager.GetObjectsFromTable(token);
             }
 
             if (_SavedObjectNames.Count == 0)
@@ -151,14 +170,14 @@ namespace inst
                 return;
             }
 
-            await LoadDatabaseObjectsAsync(_cancellationTokenSource.Token);
+            await LoadDatabaseObjectsAsync(token);
 
             Console.WriteLine("Začínám export...");
             var objectsToExport = _SavedObjectNames;
             await Task.Run(() =>
             {
-                var sortedObjects = _dbManager.GetOrderedObjects(objectsToExport, _cancellationTokenSource.Token);
-                _dbManager.ExportObjectsToFolder(_exportFolderPath, sortedObjects, _cancellationTokenSource.Token);
+                var sortedObjects = _dbManager.GetOrderedObjects(objectsToExport, token);
+                _dbManager.ExportObjectsToFolder(_exportFolderPath, sortedObjects, token);
             });
 
 
@@ -251,6 +270,101 @@ namespace inst
             }
         }
 
+        private async void LoadUpdateObjects_Click(object sender, RoutedEventArgs e)
+        {
+            if (_dbManager == null)
+            {
+                MessageBox.Show("Database manager not initialized.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var token = RenewCts();
+
+            _updateObjects.Clear();
+            UpdateStatus.Content = "Loading...";
+
+            var found = await Task.Run(() => _dbManager.GetInstalObjectsWithTypes(token));
+
+            if (token.IsCancellationRequested)
+            {
+                UpdateStatus.Content = "Cancelled.";
+                return;
+            }
+
+            foreach (var (name, type) in found)
+            {
+                _updateObjects.Add(new SelectableObject { Name = name, Type = type });
+            }
+
+            UpdateStatus.Content = $"Loaded {_updateObjects.Count} objects from coal_instalObjects.";
+        }
+
+        private void SelectAllUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (var o in _updateObjects) o.IsChecked = true;
+        }
+
+        private void SelectNoneUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (var o in _updateObjects) o.IsChecked = false;
+        }
+
+        private async void GenerateUpdateScript_Click(object sender, RoutedEventArgs e)
+        {
+            if (_dbManager == null)
+            {
+                MessageBox.Show("Database manager not initialized.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var selectedNames = _updateObjects
+                .Where(o => o.IsChecked)
+                .Select(o => o.Name)
+                .ToList();
+
+            if (selectedNames.Count == 0)
+            {
+                MessageBox.Show("Nothing selected.", "Update", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var token = RenewCts();
+
+            EnsureDirectoryExists(_updateFolderPath);
+
+            UpdateStatus.Content = $"Generating ALTER scripts for {selectedNames.Count} objects...";
+
+            await Task.Run(() => _dbManager.ExportObjectsAsAlter(_updateFolderPath, selectedNames, token));
+
+            if (token.IsCancellationRequested)
+            {
+                UpdateStatus.Content = "Cancelled.";
+                return;
+            }
+
+            string outputFile = Path.Combine(_updateFolderPath, "UpdateScript.sql");
+            FileHelper.MergeSqlFiles(_updateFolderPath, outputFile);
+
+            UpdateStatus.Content = $"Done: {outputFile}";
+        }
+
+        private void OpenUpdateFolder_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!Directory.Exists(_updateFolderPath))
+                {
+                    Directory.CreateDirectory(_updateFolderPath);
+                }
+
+                System.Diagnostics.Process.Start("explorer.exe", _updateFolderPath);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to open folder: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void CloseWindow_Click(object sender, RoutedEventArgs e)
         {
             _dbConnection.Disconect();
@@ -275,16 +389,22 @@ namespace inst
 
         }
 
+        private void LoadCoalshops()
+        {
+            if (_dbManager == null) return;
+            var shops = _dbManager.GetCoalshopList();
+            TemplateShopIdInput.ItemsSource = shops;
+        }
+
         private async void GenerateScript_Click(object sender, RoutedEventArgs e)
         {
-            string templateShopIdText = TemplateShopIdInput.Text.Trim();
-            string newShopId = ShopIdInput.Text.Trim();
-
-            if (!int.TryParse(templateShopIdText, out int templateShopId))
+            if (TemplateShopIdInput.SelectedValue is not int templateShopId)
             {
-                MessageBox.Show("Zadej platné Template ShopID.", "Chyba", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Vyber Template Shop.", "Chyba", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            string newShopId = ShopIdInput.Text.Trim();
 
             if (string.IsNullOrEmpty(newShopId))
             {
@@ -523,7 +643,9 @@ namespace inst
             if (DatabaseSelector.SelectedItem is string selectedDb)
             {
                 _dbConnection.SelectDatabase(selectedDb);
+                _dbManager = new DatabaseManager(_dbConnection);
                 UpdateDatabaseStatus(_dbConnection, DbStatus);
+                LoadCoalshops();
             }
         }
 

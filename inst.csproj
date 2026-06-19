@@ -74,4 +74,8 @@
     <PackageReference Include="Microsoft.SqlServer.SqlManagementObjects" Version="172.64.0" />
   </ItemGroup>
 
+  <Target Name="RemoveEmptyPublishDirs" AfterTargets="Publish">
+    <Exec Command="powershell -NoProfile -Command &quot;do { $e = Get-ChildItem '$(PublishDir)' -Directory -Recurse | Where-Object { -not (Get-ChildItem $_.FullName -Force) }; $e | Remove-Item -Force } while ($e)&quot;" />
+  </Target>
+
 </Project>

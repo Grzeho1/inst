@@ -17,6 +17,7 @@ namespace inst
         public required string Database { get; set; }
         public required string ExportFolderPath { get; set; }
         public required string GitScriptPath { get; set; }
+        public required string UpdateFolderPath { get; set; }
     }
 
 
@@ -39,14 +40,16 @@ namespace inst
         {
             Database = "HeliosKonektor001",
             ExportFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update", "Univerzal_SQL"),
-            GitScriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update", "auto.ps1")
+            GitScriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update", "auto.ps1"),
+            UpdateFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update", "Univerzal_SQL_update")
 
         };
         private static readonly ConfigValues ShoptetConfig = new ConfigValues
         {
             Database = "HeliosKonektor000",
             ExportFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update", "Shoptet_SQL"),
-            GitScriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update", "auto.ps1")
+            GitScriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update", "auto.ps1"),
+            UpdateFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "db-update", "Shoptet_SQL_update")
         };
 
         public static ConfigValues Active => SelectedKonektor == KonektorEnums.Konektor.Shoptet ? ShoptetConfig : UniverzalConfig;

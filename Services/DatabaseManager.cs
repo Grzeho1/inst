@@ -3,10 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Shapes;
 
 namespace inst
 {
+    public record CoalshopItem(int Id, string Nazev);
+
     /// <summary>
     /// Manages database operations such as retrieving and exporting database objects.
     /// </summary>
@@ -55,10 +58,83 @@ namespace inst
 
             foreach (View view in _database.Views)
             {
-                objects.Add(new DatabaseObject(view.Name, "View"));
+                if (!view.IsSystemObject)
+                    objects.Add(new DatabaseObject(view.Name, "View"));
+            }
+
+            foreach (UserDefinedFunction fn in _database.UserDefinedFunctions)
+            {
+                if (!fn.IsSystemObject)
+                    objects.Add(new DatabaseObject(fn.Name, "Function"));
             }
 
             return objects;
+        }
+
+        private static readonly Regex CreateToAlterRegex = new Regex(
+            @"\bCREATE\s+(PROCEDURE|PROC|VIEW|FUNCTION|TRIGGER)\b",
+            RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// Exportuje vybrané objekty jako ALTER skripty do zadané složky.
+        /// Pořadí dle vstupního seznamu (žádné topologické řazení — ALTER objekty už v cílové DB existují).
+        /// </summary>
+        public void ExportObjectsAsAlter(string exportFolderPath, List<string> objectNames, CancellationToken token)
+        {
+            if (!Directory.Exists(exportFolderPath))
+            {
+                Directory.CreateDirectory(exportFolderPath);
+            }
+
+            foreach (var existingFile in Directory.GetFiles(exportFolderPath, "*.sql", SearchOption.TopDirectoryOnly))
+            {
+                if (token.IsCancellationRequested)
+                {
+                    Console.WriteLine("přerušeno.");
+                    return;
+                }
+
+                File.Delete(existingFile);
+                Console.WriteLine($" Deleted old update export: {existingFile}");
+            }
+
+            HashSet<string> usedFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            int order = 1;
+
+            foreach (var objName in objectNames)
+            {
+                if (token.IsCancellationRequested)
+                {
+                    Console.WriteLine("přerušeno.");
+                    return;
+                }
+
+                string? sqlText = GetObjectText(objName);
+
+                if (string.IsNullOrEmpty(sqlText))
+                {
+                    Console.WriteLine($" Object '{objName}' not found.");
+                    continue;
+                }
+
+                string altered = CreateToAlterRegex.Replace(
+                    sqlText,
+                    m => "ALTER " + m.Groups[1].Value,
+                    1);
+
+                string fileName;
+                do
+                {
+                    fileName = $"{order}_{objName}.sql";
+                    order++;
+                } while (usedFileNames.Contains(fileName));
+
+                string filePath = System.IO.Path.Combine(exportFolderPath, fileName);
+                File.WriteAllText(filePath, altered);
+                Console.WriteLine($" Exported (ALTER): {filePath}");
+
+                usedFileNames.Add(fileName);
+            }
         }
 
         /// <summary>
@@ -190,6 +266,12 @@ namespace inst
                 return new DatabaseObject(objectName, "View", "FOUND");
             }
 
+            //  Hledám mezi user-defined functions
+            if (_database.UserDefinedFunctions.Contains(objectName))
+            {
+                return new DatabaseObject(objectName, "Function", "FOUND");
+            }
+
             return null; //nebyl nalezen
         }
 
@@ -271,32 +353,88 @@ namespace inst
         }
 
 
-        public List<DatabaseObject> GetDatabaseObjectsWithDependencies(List<string> objectNames,CancellationToken token)
+        public List<DatabaseObject> GetDatabaseObjectsWithDependencies(List<string> objectNames, CancellationToken token)
         {
-            List<DatabaseObject> objects = new List<DatabaseObject>();
+            var objects = new List<DatabaseObject>();
+            if (objectNames.Count == 0) return objects;
 
-            Console.WriteLine("načítání objektů se závislostmi...");
+            Console.WriteLine("načítání objektů se závislostmi (bulk)...");
 
-            foreach (var objName in objectNames)
+            string inList = string.Join(",", objectNames.Select(n => $"'{n.Replace("'", "''")}'"));
+            var nameSet = new HashSet<string>(objectNames, StringComparer.OrdinalIgnoreCase);
+
+            //  Bulk dotaz #1: typ pro všechny názvy najednou
+            var typeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            string typeQuery = $@"
+                SELECT name, type_desc
+                FROM sys.objects
+                WHERE name IN ({inList})";
+
+            var typeDataset = _database.ExecuteWithResults(typeQuery);
+            if (typeDataset.Tables.Count > 0)
             {
-                if (token.IsCancellationRequested)
+                foreach (System.Data.DataRow row in typeDataset.Tables[0].Rows)
                 {
-                    Console.WriteLine("přerušeno.");
-                    return objects;
-                }
+                    if (token.IsCancellationRequested) return objects;
 
-                string? objectType = GetObjectType(objName);
+                    string? name = row["name"]?.ToString();
+                    string? typeDesc = row["type_desc"]?.ToString();
+                    if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(typeDesc)) continue;
 
-                if (!string.IsNullOrEmpty(objectType))
-                {
-                    var dbObject = new DatabaseObject(objName, objectType);
-                    dbObject.Dependencies = GetObjectDependencies(objName, objectNames);
-                    objects.Add(dbObject);
+                    string? friendly =
+                        typeDesc.Contains("PROCEDURE") ? "Stored Procedure" :
+                        typeDesc.Contains("VIEW") ? "View" :
+                        typeDesc.Contains("TRIGGER") ? "Trigger" :
+                        typeDesc.Contains("FUNCTION") ? "Function" :
+                        null;
+
+                    if (friendly != null) typeMap[name] = friendly;
                 }
             }
 
-            Console.WriteLine($"Načteno {objects.Count}");
+            //  Bulk dotaz #2: dependencies (referencing → referenced) pro všechny najednou
+            var depMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            string depQuery = $@"
+                SELECT referencing.name AS referencing_name,
+                       d.referenced_entity_name AS referenced_name
+                FROM sys.sql_expression_dependencies d
+                INNER JOIN sys.objects referencing ON referencing.object_id = d.referencing_id
+                WHERE referencing.name IN ({inList})";
 
+            var depDataset = _database.ExecuteWithResults(depQuery);
+            if (depDataset.Tables.Count > 0)
+            {
+                foreach (System.Data.DataRow row in depDataset.Tables[0].Rows)
+                {
+                    if (token.IsCancellationRequested) return objects;
+
+                    string? refing = row["referencing_name"]?.ToString();
+                    string? refed = row["referenced_name"]?.ToString();
+                    if (string.IsNullOrEmpty(refing) || string.IsNullOrEmpty(refed)) continue;
+                    if (!nameSet.Contains(refed)) continue; // jen v rámci výběru — stejně jako originál
+
+                    if (!depMap.TryGetValue(refing, out var list))
+                    {
+                        list = new List<string>();
+                        depMap[refing] = list;
+                    }
+                    list.Add(refed);
+                }
+            }
+
+            //  Sestavení výsledku ve stejném pořadí jako vstup (kvůli stabilitě topologického sortu)
+            foreach (var objName in objectNames)
+            {
+                if (token.IsCancellationRequested) return objects;
+                if (!typeMap.TryGetValue(objName, out var type)) continue;
+
+                var dbObject = new DatabaseObject(objName, type);
+                if (depMap.TryGetValue(objName, out var deps))
+                    dbObject.Dependencies = deps;
+                objects.Add(dbObject);
+            }
+
+            Console.WriteLine($"Načteno {objects.Count}");
             return objects;
         }
 
@@ -376,6 +514,47 @@ namespace inst
         }
 
 
+        /// <summary>
+        /// Vrátí (name, type) pro všechny objekty zapsané v coal_instalObjects v jednom dotazu.
+        /// Filtruje na procedury, views, triggery a funkce — typy podporované Update workflow.
+        /// </summary>
+        public List<(string Name, string Type)> GetInstalObjectsWithTypes(CancellationToken token)
+        {
+            var result = new List<(string Name, string Type)>();
+
+            string query = @"
+                SELECT o.name, o.type_desc
+                FROM sys.objects o
+                INNER JOIN coal_instalObjects i
+                    ON LTRIM(RTRIM(i.nazev)) = o.name COLLATE DATABASE_DEFAULT
+                WHERE o.type IN ('P', 'V', 'TR', 'FN', 'IF', 'TF')
+                ORDER BY o.type_desc, o.name";
+
+            var dataset = _database.ExecuteWithResults(query);
+            if (dataset.Tables.Count == 0) return result;
+
+            foreach (System.Data.DataRow row in dataset.Tables[0].Rows)
+            {
+                if (token.IsCancellationRequested) return result;
+
+                string? name = row["name"]?.ToString();
+                string? typeDesc = row["type_desc"]?.ToString();
+                if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(typeDesc)) continue;
+
+                string friendly =
+                    typeDesc.Contains("PROCEDURE") ? "Stored Procedure" :
+                    typeDesc.Contains("VIEW") ? "View" :
+                    typeDesc.Contains("TRIGGER") ? "Trigger" :
+                    typeDesc.Contains("FUNCTION") ? "Function" :
+                    typeDesc;
+
+                result.Add((name, friendly));
+            }
+
+            return result;
+        }
+
+
         public List<string> GetObjectsFromTable(CancellationToken token)
         {
             var objectNames = new List<string>();
@@ -424,6 +603,29 @@ namespace inst
 
             return objectNames;
 
+        }
+
+        public List<CoalshopItem> GetCoalshopList()
+        {
+            var result = new List<CoalshopItem>();
+            string query = "SELECT id_externi_shop, nazev FROM Coalshop ORDER BY nazev";
+            try
+            {
+                var dataset = _database.ExecuteWithResults(query);
+                if (dataset.Tables.Count > 0)
+                {
+                    foreach (System.Data.DataRow row in dataset.Tables[0].Rows)
+                    {
+                        if (int.TryParse(row["id_externi_shop"]?.ToString(), out int id))
+                        {
+                            string nazev = row["nazev"]?.ToString() ?? id.ToString();
+                            result.Add(new CoalshopItem(id, $"{nazev} ({id})"));
+                        }
+                    }
+                }
+            }
+            catch { }
+            return result;
         }
 
         public Dictionary<string, List<System.Data.DataRow>> GetMappingValues(int shopId, int defaultOrder)
